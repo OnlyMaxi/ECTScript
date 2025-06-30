@@ -13,15 +13,12 @@
 (function() {
     'use strict';
 
-    let testing = false;
-    let manually = true;
-
     function init() {
         const url = window.location.href;
 
         switch(url) {
             case "https://tuwel.tuwien.ac.at/course/view.php?id=67085":
-                runMainCoursePage();
+                initMainCoursePage();
                 break;
             case "https://tuwel.tuwien.ac.at/mod/scorm/view.php?id=2373665":
                 startModule();
@@ -33,20 +30,21 @@
                 runPlayerPage();
                 break;
             default:
-                const hostName = window.location.hostname;
-                const pathName = window.location.pathname;
-                if (hostName !== "localhost") {
+                //const hostName = window.location.hostname;
+                //const pathName = window.location.pathname;
+                if (window.location.hostname !== "localhost") {
                     console.log("ECTScript: ERROR!\n    this URL is not supported, are you on the right page?");
                     break;
                 } else {
-                    testing = true;
                     console.log("ECTScript: TESTING!\n    You are currently testing this script on a mock page.");
                 }
-                if (pathName === "/ECTScript/mock%20website/mainPage.html") {
-                    initMainCoursePage()
+                if (window.location.pathname === "/ECTScript/mock%20website/mainPage.html") {
+                    initMainCoursePage();
                     break;
                 }
         }
+        console.log(localStorage.getItem("ECTScript-manually"));
+        console.log(localStorage.getItem("ECTScript-running"));
     }
 
     function initMainCoursePage() {
@@ -75,12 +73,19 @@
         scriptControlSectionItem.children[0].style.fontSize = "1.3rem";
         scriptControlSectionItem.children[1].style.color = "#0077ff";
 
-        const allSectionItems = document.querySelectorAll(".section-item");
-        const secondSectionItem = allSectionItems[1];
-        secondSectionItem.parentElement.insertBefore(scriptControlSectionItem, secondSectionItem);
+        const firstSectionItem = document.querySelector(".section-item");
+        firstSectionItem.parentElement.insertBefore(scriptControlSectionItem, firstSectionItem);
 
-        document.querySelector("#startAutomatically").addEventListener("click", () => runMainCoursePage());
-        document.querySelector("#startManually").addEventListener("click", () => runMainCoursePage());
+        document.querySelector("#startAutomatically").addEventListener("click", () => {
+            localStorage.setItem("ECTScript-running", "true");
+            localStorage.setItem("ECTScript-manually", "false");
+            runMainCoursePage();
+        });
+        document.querySelector("#startManually").addEventListener("click", () => {
+            runMainCoursePage();
+            localStorage.setItem("ECTScript-running", "true");
+            localStorage.setItem("ECTScript-manually", "true");
+        });
     }
     function runMainCoursePage() {
         const allSectionItems = document.querySelectorAll(".section-item");
@@ -102,23 +107,23 @@
                 if (i == 0) {
                     //allActivityNameLinks[0].click();
                 } else if (i == 1) {
-                    allActivityNameLinks[2].click();
+                    //allActivityNameLinks[2].click();
                 } else if (i == 2) {
-                    allActivityNameLinks[5].click();
+                    //allActivityNameLinks[5].click();
                 } else if (i == 3) {
-                    allActivityNameLinks[7].click();
+                    //allActivityNameLinks[7].click();
                 } else if (i == 4) {
-                    allActivityNameLinks[8].click();
+                    //allActivityNameLinks[8].click();
                 }
             }
         }
-        console.log("testing: " + testing);
-        console.log("manually: " + manually)
     }
 
     function startModule() {
-        const startButton = document.querySelector("#n");
-        startButton.click();
+        if (!Boolean(localStorage.getItem("ECTScript-manually"))) {
+            const startButton = document.querySelector("#n");
+            startButton.click();
+        }
     }
 
 
