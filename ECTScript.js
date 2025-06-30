@@ -13,34 +13,107 @@
 (function() {
     'use strict';
 
-    const url = window.location.href;
+    let testing = false;
+    let manually = true;
 
-    switch(url) {
-        case "https://tuwel.tuwien.ac.at/course/view.php?id=67085":
-            runMainCoursePage();
-            break;
-        case "https://tuwel.tuwien.ac.at/mod/scorm/view.php?id=2373665":
-            startModule();
-            break;
-        case "https://tuwel.tuwien.ac.at/mod/scorm/view.php?id=2373671":
-            startModule();
-            break;
-        case "https://tuwel.tuwien.ac.at/mod/scorm/player.php":
-            runPlayerPage();
-            break;
+    function init() {
+        const url = window.location.href;
+
+        switch(url) {
+            case "https://tuwel.tuwien.ac.at/course/view.php?id=67085":
+                runMainCoursePage();
+                break;
+            case "https://tuwel.tuwien.ac.at/mod/scorm/view.php?id=2373665":
+                startModule();
+                break;
+            case "https://tuwel.tuwien.ac.at/mod/scorm/view.php?id=2373671":
+                startModule();
+                break;
+            case "https://tuwel.tuwien.ac.at/mod/scorm/player.php":
+                runPlayerPage();
+                break;
+            default:
+                const hostName = window.location.hostname;
+                const pathName = window.location.pathname;
+                if (hostName !== "localhost") {
+                    console.log("ECTScript: ERROR!\n    this URL is not supported, are you on the right page?");
+                    break;
+                } else {
+                    testing = true;
+                    console.log("ECTScript: TESTING!\n    You are currently testing this script on a mock page.");
+                }
+                if (pathName === "/ECTScript/mock%20website/mainPage.html") {
+                    initMainCoursePage()
+                    break;
+                }
+        }
     }
 
+    function initMainCoursePage() {
+        const scriptControlSectionItem = document.createElement("div")
+        scriptControlSectionItem.classList.add("section-item");
+        scriptControlSectionItem.style.marginBottom = "1rem";
+        scriptControlSectionItem.innerHTML = `
+            <div>
+              ECTScript controls
+            </div>
+            <div>
+              <span>
+                <span class="ECTScript-start" id="startAutomatically">
+                  Start the script with full automation (You will complete the course almost instantly)
+                </span>
+              </span>
+              <div></div>
+              <span>
+                <span class="ECTScript-start" id="startManually">
+                  Start the script with manual completion (You have to continue manually after tests)
+                </span>
+              </span>
+            </div>
+        `;
+
+        scriptControlSectionItem.children[0].style.fontSize = "1.3rem";
+        scriptControlSectionItem.children[1].style.color = "#0077ff";
+
+        const allSectionItems = document.querySelectorAll(".section-item");
+        const secondSectionItem = allSectionItems[1];
+        secondSectionItem.parentElement.insertBefore(scriptControlSectionItem, secondSectionItem);
+
+        document.querySelector("#startAutomatically").addEventListener("click", () => runMainCoursePage());
+        document.querySelector("#startManually").addEventListener("click", () => runMainCoursePage());
+    }
     function runMainCoursePage() {
-        const allSections = document.querySelectorAll(".section-item");
-        const allCompletionWrappers = document.querySelectorAll(".dropdown");
-        if (allSections.length !== 8) console.log("not the right amount of sections, you might be in the wrong course!");
-        for (let i = 3; i < 8; i++) {
-            //search for completion
-            const currentSection = allSections[i];
-            const currentCompletionWrapper = allCompletionWrappers[i + 2];
-            const currentCompletion = currentCompletionWrapper.querySelector(':scope > button');
-            if (currentCompletion.innerText.includes("Erledigt")) console.log("module " + (i - 2) + " completed!");
+        const allSectionItems = document.querySelectorAll(".section-item");
+        const allCompletionWrappers = document.querySelectorAll(".dropdown.completion-dropdown");
+        const allActivityNameLinks = document.querySelectorAll(".activityname > a");
+        if (allSectionItems.length !== 9) {
+            console.log("ECTScript: ERROR!\n    Not the right amount of sections, you might be in the wrong course!");
+            return;
         }
+        for (let i = 0; i < 5; i++) {
+            //search for completion
+            const currentSection = allSectionItems[i + 3];
+            const currentCompletionWrapper = allCompletionWrappers[i];
+            const currentCompletion = currentCompletionWrapper.querySelector(':scope > button');
+            if (currentCompletion.innerText.includes("Erledigt")) {
+                console.log("ECTScript: COMPLETED!\n    module " + (i + 1) + " completed!");
+                continue;
+            } else {
+                if (i == 0) {
+                    //allActivityNameLinks[0].click();
+                } else if (i == 1) {
+                    allActivityNameLinks[2].click();
+                } else if (i == 2) {
+                    allActivityNameLinks[5].click();
+                } else if (i == 3) {
+                    allActivityNameLinks[7].click();
+                } else if (i == 4) {
+                    allActivityNameLinks[8].click();
+                }
+            }
+        }
+        console.log("testing: " + testing);
+        console.log("manually: " + manually)
     }
 
     function startModule() {
@@ -77,5 +150,10 @@
             innerApp.scrollBy(0, 10000);
             document.querySelector(".continue-btn").click();
         }
+    }
+
+    //attach the init() function to window so that it can be accessed globally (testing only)
+    window.ECTScript = {
+        init: init,
     }
 })();
