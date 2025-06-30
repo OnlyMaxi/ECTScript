@@ -50,6 +50,7 @@
     function initMainCoursePage() {
         const scriptControlSectionItem = document.createElement("div")
         scriptControlSectionItem.classList.add("section-item");
+        scriptControlSectionItem.id = "ECTScript-control"
         scriptControlSectionItem.style.marginBottom = "1rem";
         scriptControlSectionItem.innerHTML = `
             <div>
@@ -87,6 +88,7 @@
             localStorage.setItem("ECTScript-manually", "true");
         });
     }
+
     function runMainCoursePage() {
         const allSectionItems = document.querySelectorAll(".section-item");
         const allCompletionWrappers = document.querySelectorAll(".dropdown.completion-dropdown");
@@ -101,6 +103,9 @@
             const currentCompletionWrapper = allCompletionWrappers[i];
             const currentCompletion = currentCompletionWrapper.querySelector(':scope > button');
             if (currentCompletion.innerText.includes("Erledigt")) {
+                const completedMessage = document.createElement("div");
+                completedMessage.innerText = "Module " + (i + 1) + " completed";
+                document.querySelector("#ECTScript-control").appendChild(completedMessage);
                 console.log("ECTScript: COMPLETED!\n    module " + (i + 1) + " completed!");
                 continue;
             } else {
@@ -125,7 +130,6 @@
             startButton.click();
         }
     }
-
 
     function runDiversityBasicsContent() {
         const nextLesson = document.querySelecter(".next-lesson__link");
