@@ -3,9 +3,9 @@
 // @namespace    https://github.com/OnlyMaxi/ECTScript
 // @version      0
 // @description  for free ECTS click here!
-// @match        https://tuwel.tuwien.ac.at/course/view.php?id=67085
-// @match        https://tuwel.tuwien.ac.at/mod/scorm/view.php?id=2373665
-// @match        https://tuwel.tuwien.ac.at/mod/scorm/view.php?id=2373671
+// @match        https://tuwel.tuwien.ac.at/course/view.php?id=*
+// @match        https://tuwel.tuwien.ac.at/mod/scorm/view.php?id=*
+// @match        https://tuwel.tuwien.ac.at/mod/scorm/view.php?id=*
 // @match        https://tuwel.tuwien.ac.at/mod/scorm/player.php
 // @run-at       document-idle
 // ==/UserScript==
@@ -14,34 +14,46 @@
     'use strict';
 
     function init() {
-        const url = window.location.href;
+        if (window.location.origin !== "https://tuwel.tuwien.ac.at") return;
 
-        switch(url) {
-            case "https://tuwel.tuwien.ac.at/course/view.php?id=67085":
-                initMainCoursePage();
-                break;
-            case "https://tuwel.tuwien.ac.at/mod/scorm/view.php?id=2373665":
-                startModule();
-                break;
-            case "https://tuwel.tuwien.ac.at/mod/scorm/view.php?id=2373671":
-                startModule();
-                break;
-            case "https://tuwel.tuwien.ac.at/mod/scorm/player.php":
-                runPlayerPage();
-                break;
-            default:
-                //const hostName = window.location.hostname;
-                //const pathName = window.location.pathname;
-                if (window.location.hostname !== "localhost") {
-                    console.log("ECTScript: ERROR!\n    this URL is not supported, are you on the right page?");
-                    break;
-                } else {
-                    console.log("ECTScript: TESTING!\n    You are currently testing this script on a mock page.");
-                }
+        function hasCourseTitle() {
+            const titles = document.querySelectorAll("h1");
+            for (const title of titles) {
+                if (!title.innerText) continue;
+                if (title.innerText.includes("Diversity Skills")) return true;
+            }
+            return false;
+        }
+
+        function hasCourseBreadcrumb() {
+            const breadcrumbs = document.querySelectorAll(".breadcrumb-item > a");
+            for (const breadcrumb of breadcrumbs) {
+                if (!breadcrumb.title) continue;
+                if (breadcrumb.title.includes("Diversity Skills")) return true;
+            }
+            return false;
+        }
+
+        const path = window.location.pathname;
+
+        if (path === "/course/view.php" && hasCourseTitle()) {
+            initMainCoursePage();
+        } else if (path ===  "/mod/scorm/view.php" && hasCourseBreadcrumb()) {
+            startModule();
+        } else if (path === "/mod/scorm/player.php" && hasCourseBreadcrumb()) {
+            runPlayerPage();
+        } else {
+            //const hostName = window.location.hostname;
+            //const pathName = window.location.pathname;
+            if (window.location.hostname !== "localhost") {
+                console.log("ECTScript: ERROR!\n    this URL is not supported, are you on the right page?");
+            } else {
+                console.log("ECTScript: TESTING!\n    You are currently testing this script on a mock page.");
+
                 if (window.location.pathname === "/ECTScript/mock%20website/mainPage.html") {
                     initMainCoursePage();
-                    break;
                 }
+            }
         }
         console.log(localStorage.getItem("ECTScript-manually"));
         console.log(localStorage.getItem("ECTScript-running"));
