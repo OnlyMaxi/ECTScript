@@ -147,29 +147,199 @@
         const nextLesson = document.querySelecter(".next-lesson__link");
     }
 
-    function runPlayerPage() {
-        //TODO: get name of Module
-
-
-        //test for first module until first in-between-quiz
-        nextLesson(1);
-        continueButton(12);
-        nextLesson(1);
+    async function delay(ms) {
+        await new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    function nextLesson(n) {
-        for (let i = 0; i < n; i++) {
-            let nextLessonButton = document.querySelector(".next-lesson__name");
-            if (nextLessonButton) nextLessonButton.click();
+    async function runPlayerPage() {
+        const running = localStorage.getItem("ECTScript-manually") || localStorage.getItem("ECTScript-running");
+        if (!running) return;
+
+        function getLessonContent() {
+            const so = document.querySelector('#scorm_object');
+            if (!so) return null;
+            const cf = so.contentDocument.querySelector('#content-frame');
+            if (!cf) return null;
+            const lc = cf.contentDocument.querySelector('.lesson__content')
+            return lc;
         }
-    }
 
-    function continueButton(n) {
-        for (let i = 0; i < n; i++) {
-            console.log("continueButton times " + i);
-            const innerApp = document.querySelector("#app")
-            innerApp.scrollBy(0, 10000);
-            document.querySelector(".continue-btn").click();
+        let lc;
+        do {
+            lc = getLessonContent();
+            await delay(100);
+        } while (!lc);
+        
+        for (let failures = 0; failures < 100; ) {
+            if (await runNext(lc)) {
+                failures = 0;
+            } else {
+                failures++;
+            }
+            await delay(10);
+        }
+
+        // todo: improve abort logic
+        console.log('failed too many times, aborting...')
+
+        async function runNext(lc) {
+            const quizWrap = lc.querySelector('.quiz__wrap');
+            if (quizWrap) {
+                await solveQuiz(quizWrap);
+                await delay(5000)
+            }
+
+            const nextLink = lc.querySelector('.next-lesson__link');
+            if (nextLink) {
+                nextLink.click();
+                return true;
+            }
+
+            const app = lc.closest("#app")
+            app.scrollBy(0, 100000);
+            const continueBtn = lc.querySelector('.continue-btn');
+            if (continueBtn) {
+                continueBtn.click();
+                return true;
+            }
+
+            await delay(3000);
+
+            return false;
+        }
+
+        async function solveQuiz(quizWrap) {
+            let lastActiveCard = null;
+            let activeCard = quizWrap.querySelector('.quiz-item__card--active');
+
+            // restart if needed
+            if (!activeCard.querySelector('.quiz-header__container')) {
+                quizWrap.querySelector('.restart-button').click();
+                lastActiveCard = activeCard;
+            }
+
+            // collect solutions
+            let solutions = [];
+            while (true) {
+                await delay(10);
+
+                let activeCard = quizWrap.querySelector('.quiz-item__card--active');
+                if (!activeCard) break;
+                if (activeCard === lastActiveCard) {
+                    continue;
+                }
+                lastActiveCard = activeCard;
+
+                if (activeCard.querySelector('.quiz-header__container')) {
+                    activeCard.querySelector('.quiz-header__start-quiz').click();
+                } else if (activeCard.querySelector('.quiz-multiple-response-option-wrap')) {
+                    const checkboxes = activeCard.querySelectorAll('.quiz-multiple-response-option');
+                    for (const checkbox of checkboxes) {
+                        checkbox.click();
+                    }
+
+                    activeCard.querySelector('.quiz-card__submit > button').click();
+
+                    const solution = [];
+                    solutions.push(solution);
+                    for (const answer of checkboxes) {
+                        solution.push(answer.classList.contains('quiz-multiple-response-option--correct'));
+                    }
+
+                    activeCard.querySelector('.quiz-card__feedback-button > button').click();
+                } else if (activeCard.querySelector('.quiz-match')) {
+                    const draggablesLen = activeCard.querySelectorAll('.quiz-match__item--draggable .quiz-match__item-wrapper').length;
+                    for (let i = 0; i < draggablesLen; i++) {
+                        const draggables = activeCard.querySelectorAll('.quiz-match__item--draggable .quiz-match__item-wrapper');
+                        draggables[i].focus();
+                        draggables[i].dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true }));
+
+                        const droppables = activeCard.querySelectorAll('.quiz-match__item.droppable');
+                        droppables[i].focus();
+                        droppables[i].dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true }));
+                    }
+
+                    activeCard.querySelector('.quiz-card__submit > button').click();
+
+                    const solution = [];
+                    solutions.push(solution);
+                    const answers = activeCard.querySelectorAll('.quiz-match__item-feedback');
+                    const draggables = activeCard.querySelectorAll('.quiz-match__item--draggable .quiz-match__item-wrapper');
+                    const droppables = activeCard.querySelectorAll('.quiz-match__item.droppable');
+                    for (let i = 0; i < answers.length; i++) {
+                        const bubble = answers[i].querySelector('.quiz-match__item-feedback-bubble');
+                        const targetIndex = bubble ? parseInt(bubble.innerText) - 1 : i;
+                        solution.push({
+                            origin: draggables[i].querySelector('[data-match-content="true"]').innerText,
+                            target: droppables[targetIndex].querySelector('[data-match-content="true"]').innerText,
+                        });
+                    }
+
+                    activeCard.querySelector('.quiz-card__feedback-button > button').click();
+                } else if (false) {
+                    // todo: handle more quiz types
+                } else if (activeCard.querySelector('.quiz-results')) {
+                    // restart quiz
+                    quizWrap.querySelector('.restart-button').click();
+                    break;
+                }
+            }
+
+            // run with solutions
+            while (true) {
+                await delay(10);
+
+                let activeCard = quizWrap.querySelector('.quiz-item__card--active');
+                if (!activeCard) break;
+                if (activeCard === lastActiveCard) {
+                    continue;
+                }
+                lastActiveCard = activeCard;
+
+                if (activeCard.querySelector('.quiz-header__container')) {
+                    activeCard.querySelector('.quiz-header__start-quiz').click();
+                } else if (activeCard.querySelector('.quiz-multiple-response-option-wrap')) {
+                    const solution = solutions.shift();
+
+                    const checkboxes = activeCard.querySelectorAll('.quiz-multiple-response-option');
+                    for (let i = 0; i < checkboxes.length; i++) {
+                        if (solution[i]) {
+                            checkboxes[i].click();
+                        }
+                    }
+
+                    activeCard.querySelector('.quiz-card__submit > button').click();
+
+                    activeCard.querySelector('.quiz-card__feedback-button > button').click();
+                } else if (activeCard.querySelector('.quiz-match')) {
+                    const solution = solutions.shift();
+
+                    while (solution.length > 0) {
+                        const match = solution.shift();
+                        
+                        const draggables = activeCard.querySelectorAll('.quiz-match__item--draggable .quiz-match__item-wrapper');
+                        const draggable = Array.from(draggables).find(d => d.querySelector('[data-match-content="true"]').innerText === match.origin);
+                        draggable.focus();
+                        draggable.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true }));
+
+                        const droppables = activeCard.querySelectorAll('.quiz-match__item.droppable');
+                        const droppable = Array.from(droppables).find(d => d.querySelector('[data-match-content="true"]').innerText === match.target);
+                        droppable.focus();
+                        droppable.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true }));
+                    }
+
+                    activeCard.querySelector('.quiz-card__submit > button').click();
+
+                    activeCard.querySelector('.quiz-card__feedback-button > button').click();
+                } else if (false) {
+                    // todo: handle more quiz types
+                } else if (activeCard.querySelector('.quiz-results')) {
+                    // done
+                    break;
+                }
+            }
+
+            // todo: evaluate quiz result
         }
     }
 
