@@ -385,7 +385,6 @@
         let score;
         while (!(score = getScore())) {
             await delay(100);
-            console.log("waiting for score");
         }
         return score.innerText === '100%';
     }
