@@ -174,7 +174,8 @@
 
         // start from the first lesson
         function getFirstLessonLink() {
-            return app.querySelector('.lesson-lists__list > li:first-of-type a');
+            return app.querySelector('.lesson-lists__list > li:first-of-type a')
+                || app.querySelector('.overview-list__list > li:first-of-type a');
         }
         let firstLessonLink;
         while (!(firstLessonLink = getFirstLessonLink())) {
