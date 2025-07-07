@@ -194,7 +194,12 @@
 
             let quizWrap = page.querySelector('.quiz__wrap');
             if (quizWrap) {
-                await solveQuiz(quizWrap);
+                const fullScore = await solveQuiz(quizWrap);
+                if (!fullScore) {
+                    // todo: better error handling
+                    console.error('Quiz not completed with full score!');
+                    return;
+                }
             }
 
             const nextLink = page.querySelector('.next-lesson__link');
@@ -372,7 +377,15 @@
                 }
             }
 
-            // todo: evaluate quiz result
+            function getScore() {
+                return quizWrap.querySelector('.odometer__score-percent--hidden');
+            }
+            let score;
+            while (!(score = getScore())) {
+                await delay(100);
+                console.log("waiting for score");
+            }
+            return score.innerText === '100%';
         }
     }
 
