@@ -221,6 +221,110 @@
         // todo
         console.log("Course completed!");
     }
+
+    async function collectQuizCardSolution(quizCard) {
+        let solution = null;
+
+        if (quizCard.querySelector('.quiz-multiple-response-option-wrap')) {
+            const checkboxes = quizCard.querySelectorAll('.quiz-multiple-response-option');
+            for (const checkbox of checkboxes) {
+                checkbox.click();
+            }
+
+            quizCard.querySelector('.quiz-card__submit > button').click();
+
+            solution = [];
+            for (const answer of checkboxes) {
+                solution.push(answer.classList.contains('quiz-multiple-response-option--correct'));
+            }
+        } else if (quizCard.querySelector('.quiz-match')) {
+            const draggablesLen = quizCard.querySelectorAll('.quiz-match__item--draggable .quiz-match__item-wrapper').length;
+            for (let i = 0; i < draggablesLen; i++) {
+                const draggables = quizCard.querySelectorAll('.quiz-match__item--draggable .quiz-match__item-wrapper');
+                draggables[i].focus();
+                draggables[i].dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true }));
+
+                const droppables = quizCard.querySelectorAll('.quiz-match__item.droppable');
+                droppables[i].focus();
+                droppables[i].dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true }));
+            }
+
+            quizCard.querySelector('.quiz-card__submit > button').click();
+
+            solution = [];
+            const answers = quizCard.querySelectorAll('.quiz-match__item-feedback');
+            const draggables = quizCard.querySelectorAll('.quiz-match__item--draggable .quiz-match__item-wrapper');
+            const droppables = quizCard.querySelectorAll('.quiz-match__item.droppable');
+            for (let i = 0; i < answers.length; i++) {
+                const bubble = answers[i].querySelector('.quiz-match__item-feedback-bubble');
+                const targetIndex = bubble ? parseInt(bubble.innerText) - 1 : i;
+                solution.push({
+                    origin: draggables[i].querySelector('[data-match-content="true"]').innerText,
+                    target: droppables[targetIndex].querySelector('[data-match-content="true"]').innerText,
+                });
+            }
+        } else if (quizCard.querySelector('.quiz-multiple-choice-option-wrap')) {
+            const options = quizCard.querySelectorAll('.quiz-multiple-choice-option');
+
+            options[0].click();
+
+            quizCard.querySelector('.quiz-card__submit > button').click();
+
+            solution = [];
+            for (let i = 0; i < options.length; i++) {
+                const inc = options[i].classList.contains('quiz-multiple-choice-option--incorrect')
+                solution.push(!inc);
+            }
+        }
+
+        return solution;
+    }
+
+    async function applyQuizCardSolution(quizCard, solution) {
+        if (quizCard.querySelector('.quiz-multiple-response-option-wrap')) {
+            const checkboxes = quizCard.querySelectorAll('.quiz-multiple-response-option');
+            for (let i = 0; i < checkboxes.length; i++) {
+                if (solution[i]) {
+                    checkboxes[i].click();
+                }
+            }
+
+            quizCard.querySelector('.quiz-card__submit > button').click();
+
+            return true;
+        } else if (quizCard.querySelector('.quiz-match')) {
+            while (solution.length > 0) {
+                const match = solution.shift();
+                
+                const draggables = quizCard.querySelectorAll('.quiz-match__item--draggable .quiz-match__item-wrapper');
+                const draggable = Array.from(draggables).find(d => d.querySelector('[data-match-content="true"]').innerText === match.origin);
+                draggable.focus();
+                draggable.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true }));
+
+                const droppables = quizCard.querySelectorAll('.quiz-match__item.droppable');
+                const droppable = Array.from(droppables).find(d => d.querySelector('[data-match-content="true"]').innerText === match.target);
+                droppable.focus();
+                droppable.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true }));
+            }
+
+            quizCard.querySelector('.quiz-card__submit > button').click();
+
+            return true;
+        } else if (quizCard.querySelector('.quiz-multiple-choice-option-wrap')) {
+            const options = quizCard.querySelectorAll('.quiz-multiple-choice-option');
+            for (let i = 0; i < options.length; i++) {
+                if (solution[i]) {
+                    options[i].click();
+                }
+            }
+
+            quizCard.querySelector('.quiz-card__submit > button').click();
+
+            return true;
+        }
+
+        return false;
+    }
     
     async function solveQuiz(quizWrap) {
         let lastActiveCard = null;
@@ -247,69 +351,17 @@
 
             if (activeCard.querySelector('.quiz-header__container')) {
                 activeCard.querySelector('.quiz-header__start-quiz').click();
-            } else if (activeCard.querySelector('.quiz-multiple-response-option-wrap')) {
-                const checkboxes = activeCard.querySelectorAll('.quiz-multiple-response-option');
-                for (const checkbox of checkboxes) {
-                    checkbox.click();
-                }
-
-                activeCard.querySelector('.quiz-card__submit > button').click();
-
-                const solution = [];
-                solutions.push(solution);
-                for (const answer of checkboxes) {
-                    solution.push(answer.classList.contains('quiz-multiple-response-option--correct'));
-                }
-
-                activeCard.querySelector('.quiz-card__feedback-button > button').click();
-            } else if (activeCard.querySelector('.quiz-match')) {
-                const draggablesLen = activeCard.querySelectorAll('.quiz-match__item--draggable .quiz-match__item-wrapper').length;
-                for (let i = 0; i < draggablesLen; i++) {
-                    const draggables = activeCard.querySelectorAll('.quiz-match__item--draggable .quiz-match__item-wrapper');
-                    draggables[i].focus();
-                    draggables[i].dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true }));
-
-                    const droppables = activeCard.querySelectorAll('.quiz-match__item.droppable');
-                    droppables[i].focus();
-                    droppables[i].dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true }));
-                }
-
-                activeCard.querySelector('.quiz-card__submit > button').click();
-
-                const solution = [];
-                solutions.push(solution);
-                const answers = activeCard.querySelectorAll('.quiz-match__item-feedback');
-                const draggables = activeCard.querySelectorAll('.quiz-match__item--draggable .quiz-match__item-wrapper');
-                const droppables = activeCard.querySelectorAll('.quiz-match__item.droppable');
-                for (let i = 0; i < answers.length; i++) {
-                    const bubble = answers[i].querySelector('.quiz-match__item-feedback-bubble');
-                    const targetIndex = bubble ? parseInt(bubble.innerText) - 1 : i;
-                    solution.push({
-                        origin: draggables[i].querySelector('[data-match-content="true"]').innerText,
-                        target: droppables[targetIndex].querySelector('[data-match-content="true"]').innerText,
-                    });
-                }
-
-                activeCard.querySelector('.quiz-card__feedback-button > button').click();
-            } else if (activeCard.querySelector('.quiz-multiple-choice-option-wrap')) {
-                const options = activeCard.querySelectorAll('.quiz-multiple-choice-option');
-
-                options[0].click();
-
-                activeCard.querySelector('.quiz-card__submit > button').click();
-
-                const solution = [];
-                solutions.push(solution);
-                for (let i = 0; i < options.length; i++) {
-                    const inc = options[i].classList.contains('quiz-multiple-choice-option--incorrect')
-                    solution.push(!inc);
-                }
-
-                activeCard.querySelector('.quiz-card__feedback-button > button').click();
             } else if (activeCard.querySelector('.quiz-results')) {
                 // restart quiz
                 activeCard.querySelector('.restart-button').click();
                 break;
+            } else {
+                const solution = await collectQuizCardSolution(activeCard);
+                if (solution) {
+                    activeCard.querySelector('.quiz-card__feedback-button > button').click();
+
+                    solutions.push(solution);
+                }
             }
         }
 
@@ -327,55 +379,16 @@
 
             if (activeCard.querySelector('.quiz-header__container')) {
                 activeCard.querySelector('.quiz-header__start-quiz').click();
-            } else if (activeCard.querySelector('.quiz-multiple-response-option-wrap')) {
-                const solution = solutions.shift();
-
-                const checkboxes = activeCard.querySelectorAll('.quiz-multiple-response-option');
-                for (let i = 0; i < checkboxes.length; i++) {
-                    if (solution[i]) {
-                        checkboxes[i].click();
-                    }
-                }
-
-                activeCard.querySelector('.quiz-card__submit > button').click();
-
-                activeCard.querySelector('.quiz-card__feedback-button > button').click();
-            } else if (activeCard.querySelector('.quiz-match')) {
-                const solution = solutions.shift();
-
-                while (solution.length > 0) {
-                    const match = solution.shift();
-                    
-                    const draggables = activeCard.querySelectorAll('.quiz-match__item--draggable .quiz-match__item-wrapper');
-                    const draggable = Array.from(draggables).find(d => d.querySelector('[data-match-content="true"]').innerText === match.origin);
-                    draggable.focus();
-                    draggable.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true }));
-
-                    const droppables = activeCard.querySelectorAll('.quiz-match__item.droppable');
-                    const droppable = Array.from(droppables).find(d => d.querySelector('[data-match-content="true"]').innerText === match.target);
-                    droppable.focus();
-                    droppable.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true }));
-                }
-
-                activeCard.querySelector('.quiz-card__submit > button').click();
-
-                activeCard.querySelector('.quiz-card__feedback-button > button').click();
-            } else if (activeCard.querySelector('.quiz-multiple-choice-option-wrap')) {
-                const solution = solutions.shift();
-
-                const options = activeCard.querySelectorAll('.quiz-multiple-choice-option');
-                for (let i = 0; i < options.length; i++) {
-                    if (solution[i]) {
-                        options[i].click();
-                    }
-                }
-
-                activeCard.querySelector('.quiz-card__submit > button').click();
-
-                activeCard.querySelector('.quiz-card__feedback-button > button').click();
             } else if (activeCard.querySelector('.quiz-results')) {
                 // done
                 break;
+            } else {
+                const didApply = await applyQuizCardSolution(activeCard, solutions[0]);
+                if (didApply) {
+                    activeCard.querySelector('.quiz-card__feedback-button > button').click();
+
+                    solutions.shift();
+                }
             }
         }
 
