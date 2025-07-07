@@ -151,63 +151,70 @@
         await new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    async function tick() {
+        await delay(0);
+    }
+
     async function runPlayerPage() {
         const running = localStorage.getItem("ECTScript-manually") || localStorage.getItem("ECTScript-running");
         if (!running) return;
 
-        function getLessonContent() {
+        // wait until loaded
+        function getApp() {
             const so = document.querySelector('#scorm_object');
             if (!so) return null;
             const cf = so.contentDocument.querySelector('#content-frame');
             if (!cf) return null;
-            const lc = cf.contentDocument.querySelector('.lesson__content')
-            return lc;
+            return cf.contentDocument.querySelector('#app')
         }
-
-        let lc;
-        do {
-            lc = getLessonContent();
+        let app;
+        while (!(app = getApp())) {
             await delay(100);
-        } while (!lc);
-        
-        for (let failures = 0; failures < 100; ) {
-            if (await runNext(lc)) {
-                failures = 0;
-            } else {
-                failures++;
-            }
-            await delay(10);
         }
 
-        // todo: improve abort logic
-        console.log('failed too many times, aborting...')
+        // start from the first lesson
+        function getFirstLessonLink() {
+            return app.querySelector('.lesson-lists__list > li:first-of-type a');
+        }
+        let firstLessonLink;
+        while (!(firstLessonLink = getFirstLessonLink())) {
+            await delay(100);
+        }
+        firstLessonLink.click();
 
-        async function runNext(lc) {
-            const quizWrap = lc.querySelector('.quiz__wrap');
+        // complete course
+        while (true) {
+            const page = app.querySelector('#page-wrap > main:first-of-type');
+            while (!page) {
+                await delay(100);
+            }
+            page.parentElement.scrollBy(0, 100000);
+
+            await tick();
+
+            let quizWrap = page.querySelector('.quiz__wrap');
             if (quizWrap) {
                 await solveQuiz(quizWrap);
-                await delay(5000)
             }
 
-            const nextLink = lc.querySelector('.next-lesson__link');
+            const nextLink = page.querySelector('.next-lesson__link');
             if (nextLink) {
                 nextLink.click();
-                return true;
+                continue;
             }
 
-            const app = lc.closest("#app")
-            app.scrollBy(0, 100000);
-            const continueBtn = lc.querySelector('.continue-btn');
+            const continueBtn = page.querySelector('.continue-btn');
             if (continueBtn) {
                 continueBtn.click();
-                return true;
+                continue;
             }
 
-            await delay(3000);
-
-            return false;
+            break;
         }
 
+        // todo
+        console.log("Course completed!");
+        
         async function solveQuiz(quizWrap) {
             let lastActiveCard = null;
             let activeCard = quizWrap.querySelector('.quiz-item__card--active');
@@ -221,11 +228,12 @@
             // collect solutions
             let solutions = [];
             while (true) {
-                await delay(10);
+                await tick();
 
                 let activeCard = quizWrap.querySelector('.quiz-item__card--active');
                 if (!activeCard) break;
                 if (activeCard === lastActiveCard) {
+                    await delay(100);
                     continue;
                 }
                 lastActiveCard = activeCard;
@@ -276,22 +284,36 @@
                     }
 
                     activeCard.querySelector('.quiz-card__feedback-button > button').click();
-                } else if (false) {
-                    // todo: handle more quiz types
+                } else if (activeCard.querySelector('.quiz-multiple-choice-option-wrap')) {
+                    const options = activeCard.querySelectorAll('.quiz-multiple-choice-option');
+
+                    options[0].click();
+
+                    activeCard.querySelector('.quiz-card__submit > button').click();
+
+                    const solution = [];
+                    solutions.push(solution);
+                    for (let i = 0; i < options.length; i++) {
+                        const inc = options[i].classList.contains('quiz-multiple-choice-option--incorrect')
+                        solution.push(!inc);
+                    }
+
+                    activeCard.querySelector('.quiz-card__feedback-button > button').click();
                 } else if (activeCard.querySelector('.quiz-results')) {
                     // restart quiz
-                    quizWrap.querySelector('.restart-button').click();
+                    activeCard.querySelector('.restart-button').click();
                     break;
                 }
             }
 
             // run with solutions
             while (true) {
-                await delay(10);
+                await tick();
 
                 let activeCard = quizWrap.querySelector('.quiz-item__card--active');
                 if (!activeCard) break;
                 if (activeCard === lastActiveCard) {
+                    await delay(100);
                     continue;
                 }
                 lastActiveCard = activeCard;
@@ -331,8 +353,19 @@
                     activeCard.querySelector('.quiz-card__submit > button').click();
 
                     activeCard.querySelector('.quiz-card__feedback-button > button').click();
-                } else if (false) {
-                    // todo: handle more quiz types
+                } else if (activeCard.querySelector('.quiz-multiple-choice-option-wrap')) {
+                    const solution = solutions.shift();
+
+                    const options = activeCard.querySelectorAll('.quiz-multiple-choice-option');
+                    for (let i = 0; i < options.length; i++) {
+                        if (solution[i]) {
+                            options[i].click();
+                        }
+                    }
+
+                    activeCard.querySelector('.quiz-card__submit > button').click();
+
+                    activeCard.querySelector('.quiz-card__feedback-button > button').click();
                 } else if (activeCard.querySelector('.quiz-results')) {
                     // done
                     break;
