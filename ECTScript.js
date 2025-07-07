@@ -193,6 +193,16 @@
 
             await tick();
 
+            const knowledgeBlock = page.querySelector('.block-knowledge:not(.block-knowledge--answered)');
+            if (knowledgeBlock) {
+                const didSolve = await solveKnowledgeBlock(knowledgeBlock);
+                if (!didSolve) {
+                    // todo: better error handling
+                    console.error('Knowledge block not completed correctly!');
+                    return;
+                }
+            }
+
             const quizWrap = page.querySelector('.quiz__wrap');
             if (quizWrap) {
                 const fullScore = await solveQuiz(quizWrap);
@@ -400,6 +410,24 @@
             await delay(100);
         }
         return score.innerText === '100%';
+    }
+
+    async function solveKnowledgeBlock(knowledgeBlock) {
+        const solution = await collectQuizCardSolution(knowledgeBlock);
+
+        knowledgeBlock.querySelector('.block-knowledge__retake').click();
+
+        while (knowledgeBlock.querySelector('.quiz-multiple-choice-option-wrap--complete')) {
+            await delay(100);
+        }
+
+        await applyQuizCardSolution(knowledgeBlock, solution);
+
+        if (!knowledgeBlock.querySelector('.quiz-card__feedback-icon--correct')) {
+            return false;
+        }
+
+        return true;
     }
 
     //attach the init() function to window so that it can be accessed globally (testing only)
