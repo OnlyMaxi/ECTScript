@@ -215,6 +215,24 @@
                 }
             }
 
+            const activeCardSelector = '.process-card--active';
+            const finalCardSelector = '.process-card--summary';
+            const activeFinalCardSelector = activeCardSelector + finalCardSelector;
+            const processBlock = page.querySelector(`.block-process:not(${activeFinalCardSelector})`);
+            if (processBlock) {
+                processBlock.querySelector('.process-card__button').click();
+
+                while (!processBlock.querySelector(activeFinalCardSelector)) {
+                    const activeCard = processBlock.querySelector(activeCardSelector);
+                    const tabNext = activeCard.querySelector('.process-counter__item--active + .process-counter__item');
+                    tabNext.click();
+                    while (activeCard === processBlock.querySelector(activeCardSelector)) {
+                        await delay(100);
+                        tabNext.click();
+                    }
+                }
+            }
+
             const quizWrap = page.querySelector('.quiz__wrap');
             if (quizWrap) {
                 const fullScore = await solveQuiz(quizWrap);
