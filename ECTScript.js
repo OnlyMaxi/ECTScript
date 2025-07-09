@@ -498,8 +498,5 @@
         return true;
     }
 
-    //attach the init() function to window so that it can be accessed globally (testing only)
-    window.ECTScript = {
-        init: init,
-    }
+    init();
 })();
