@@ -184,8 +184,9 @@
         firstLessonLink.click();
 
         // complete course
+        let page;
         while (true) {
-            const page = app.querySelector('#page-wrap > main:first-of-type');
+            page = app.querySelector('#page-wrap > main:first-of-type');
             while (!page) {
                 await delay(100);
             }
@@ -258,8 +259,19 @@
             break;
         }
 
-        // todo
+        if (!isLastPage(page)) {
+            // todo: better error handling
+            console.error('Nothing to do, but course does not seem completed!');
+            return;
+        }
+
         console.log("Course completed!");
+    }
+
+    function isLastPage(page) {
+        const lessonCountText = page.querySelector('.lesson-header__count').innerText;
+        const nums = lessonCountText.match(/[0-9]+/g);
+        return nums[0] && nums[0] === nums[1];
     }
 
     function fillReactInput(input, value) {
