@@ -203,6 +203,18 @@
                 }
             }
 
+            const nextCardSelector = '.block-flashcards-slider__arrow--next:not([aria-disabled="true"])';
+            const flashcards = page.querySelector(`.block-flashcards-slider__wrap:not(${nextCardSelector})`);
+            if (flashcards) {
+                let flashcardNext;
+                while (flashcardNext = page.querySelector(nextCardSelector)) {
+                    const activeCard = flashcards.querySelector('.slick-active');
+                    activeCard.querySelector('.block-flashcard__front').click();
+                    flashcardNext.click();
+                    await tick();
+                }
+            }
+
             const quizWrap = page.querySelector('.quiz__wrap');
             if (quizWrap) {
                 const fullScore = await solveQuiz(quizWrap);
