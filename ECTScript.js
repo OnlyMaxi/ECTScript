@@ -183,7 +183,7 @@
         }
         firstLessonLink.click();
 
-        // complete course
+        // complete module
         let page;
         while (true) {
             page = app.querySelector('#page-wrap > main:first-of-type');
@@ -261,11 +261,15 @@
 
         if (!isLastPage(page)) {
             // todo: better error handling
-            console.error('Nothing to do, but course does not seem completed!');
+            console.error('Nothing to do, but module does not seem completed!');
             return;
         }
 
-        console.log("Course completed!");
+        // works without it, but just to be sure, the request goes through
+        await delay(500);
+
+        // close module
+        document.querySelector('div[role="main"] .btn[href^="https://tuwel.tuwien.ac.at/course/view.php"]').click();
     }
 
     function isLastPage(page) {
