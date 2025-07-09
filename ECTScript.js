@@ -232,6 +232,13 @@
         console.log("Course completed!");
     }
 
+    function fillReactInput(input, value) {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, value);
+        for (const event of ['input', 'change']) {
+            input.dispatchEvent(new Event(event, { bubbles: true }));
+        }
+    }
+
     async function collectQuizCardSolution(quizCard) {
         let solution = null;
 
@@ -285,6 +292,14 @@
                 const inc = options[i].classList.contains('quiz-multiple-choice-option--incorrect')
                 solution.push(!inc);
             }
+        } else if (quizCard.querySelector('.quiz-fill')) {
+            const input = quizCard.querySelector('.quiz-fill__container > input');
+            fillReactInput(input, '-');
+            
+            quizCard.querySelector('.quiz-card__submit > button').click();
+
+            const optionsFeedback = quizCard.querySelector('.quiz-fill__options').innerText;
+            solution = optionsFeedback.replace(/.*: /, '').split(', ')[0];
         }
 
         return solution;
@@ -328,6 +343,13 @@
                 }
             }
 
+            quizCard.querySelector('.quiz-card__submit > button').click();
+
+            return true;
+        } else if (quizCard.querySelector('.quiz-fill')) {
+            const input = quizCard.querySelector('.quiz-fill__container > input');
+            fillReactInput(input, solution);
+            
             quizCard.querySelector('.quiz-card__submit > button').click();
 
             return true;
