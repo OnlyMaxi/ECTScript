@@ -77,10 +77,12 @@
             text-decoration: underline;
             cursor: pointer;
         }
+        
+        #ECTScript-messages {
+            color: #33bb33;
+        }
     `;
         document.head.appendChild(style);
-        scriptControlSectionItem.children[0].style.fontSize = "1.3rem";
-        scriptControlSectionItem.children[1].style.color = "#0077ff";
 
         const firstSectionItem = document.querySelector(".section-item");
         firstSectionItem.parentElement.insertBefore(scriptControlSectionItem, firstSectionItem);
