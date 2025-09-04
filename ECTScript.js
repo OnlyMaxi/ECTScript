@@ -5,7 +5,6 @@
 // @description  for free ECTS click here!
 // @match        https://tuwel.tuwien.ac.at/course/view.php?id=*
 // @match        https://tuwel.tuwien.ac.at/mod/scorm/view.php?id=*
-// @match        https://tuwel.tuwien.ac.at/mod/scorm/view.php?id=*
 // @match        https://tuwel.tuwien.ac.at/mod/scorm/player.php
 // @run-at       document-idle
 // ==/UserScript==
@@ -37,32 +36,19 @@
         const path = window.location.pathname;
 
         if (path === "/course/view.php" && hasCourseTitle()) {
-            initMainCoursePage();
-        } else if (path ===  "/mod/scorm/view.php" && hasCourseBreadcrumb()) {
+            initMainPage();
+        } else if (path === "/mod/scorm/view.php" && hasCourseBreadcrumb()) {
             startModule();
         } else if (path === "/mod/scorm/player.php" && hasCourseBreadcrumb()) {
             runPlayerPage();
-        } else {
-            //const hostName = window.location.hostname;
-            //const pathName = window.location.pathname;
-            if (window.location.hostname !== "localhost") {
-                console.log("ECTScript: ERROR!\n    this URL is not supported, are you on the right page?");
-            } else {
-                console.log("ECTScript: TESTING!\n    You are currently testing this script on a mock page.");
-
-                if (window.location.pathname === "/ECTScript/mock%20website/mainPage.html") {
-                    initMainCoursePage();
-                }
-            }
         }
-        console.log(localStorage.getItem("ECTScript-manually"));
-        console.log(localStorage.getItem("ECTScript-running"));
     }
 
-    function initMainCoursePage() {
+    function initMainPage() {
+        // create settings div
         const scriptControlSectionItem = document.createElement("div")
         scriptControlSectionItem.classList.add("section-item");
-        scriptControlSectionItem.id = "ECTScript-control"
+        scriptControlSectionItem.id = "ECTSettings"
         scriptControlSectionItem.style.marginBottom = "1rem";
         scriptControlSectionItem.innerHTML = `
             <div>
@@ -89,6 +75,7 @@
         const firstSectionItem = document.querySelector(".section-item");
         firstSectionItem.parentElement.insertBefore(scriptControlSectionItem, firstSectionItem);
 
+        // add event listeners to start the script
         document.querySelector("#startAutomatically").addEventListener("click", () => {
             localStorage.setItem("ECTScript-running", "true");
             localStorage.setItem("ECTScript-manually", "false");
@@ -117,7 +104,7 @@
             if (currentCompletion.innerText.includes("Erledigt")) {
                 const completedMessage = document.createElement("div");
                 completedMessage.innerText = "Module " + (i + 1) + " completed";
-                document.querySelector("#ECTScript-control").appendChild(completedMessage);
+                document.querySelector("#ECTSettings").appendChild(completedMessage);
                 console.log("ECTScript: COMPLETED!\n    module " + (i + 1) + " completed!");
                 continue;
             } else {
@@ -141,10 +128,6 @@
             const startButton = document.querySelector("#n");
             startButton.click();
         }
-    }
-
-    function runDiversityBasicsContent() {
-        const nextLesson = document.querySelecter(".next-lesson__link");
     }
 
     async function delay(ms) {
