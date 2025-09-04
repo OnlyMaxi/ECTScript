@@ -51,16 +51,33 @@
         scriptControlSectionItem.id = "ECTSettings"
         scriptControlSectionItem.style.marginBottom = "1rem";
         scriptControlSectionItem.innerHTML = `
-            <div>
+            <div id="ECTScript-heading">
               ECTScript controls
             </div>
             <div>
-            <span class="ECTScript-start" id="startAutomatically">
-              Start the ECTScript (you will complete all modules automatically)
-            </span>
-              <div>
+                <span id="ECTScript-start">
+                  Start the ECTScript (you will complete all modules automatically)
+                </span>
+            </div>
         `;
 
+
+        const style = document.createElement("style");
+        style.textContent = `
+        #ECTScript-heading {
+            font-size: 1.3rem;
+        }
+        
+        #ECTScript-start {
+            color: #006699;
+        }
+        
+        #ECTScript-start:hover {
+            text-decoration: underline;
+            cursor: pointer;
+        }
+    `;
+        document.head.appendChild(style);
         scriptControlSectionItem.children[0].style.fontSize = "1.3rem";
         scriptControlSectionItem.children[1].style.color = "#0077ff";
 
@@ -68,7 +85,7 @@
         firstSectionItem.parentElement.insertBefore(scriptControlSectionItem, firstSectionItem);
 
         // add event listener to start the script
-        document.querySelector("#startAutomatically").addEventListener("click", () => {
+        document.querySelector("#ECTScript-start").addEventListener("click", () => {
             localStorage.setItem("ECTScript-running", "true");
             runMainCoursePage();
         });
