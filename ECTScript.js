@@ -55,18 +55,10 @@
               ECTScript controls
             </div>
             <div>
-              <span>
-                <span class="ECTScript-start" id="startAutomatically">
-                  Start the script with full automation (You will complete the course almost instantly)
-                </span>
-              </span>
-              <div></div>
-              <span>
-                <span class="ECTScript-start" id="startManually">
-                  Start the script with manual completion (You have to continue manually after tests)
-                </span>
-              </span>
-            </div>
+            <span class="ECTScript-start" id="startAutomatically">
+              Start the ECTScript (you will complete all modules automatically)
+            </span>
+              <div>
         `;
 
         scriptControlSectionItem.children[0].style.fontSize = "1.3rem";
@@ -75,16 +67,10 @@
         const firstSectionItem = document.querySelector(".section-item");
         firstSectionItem.parentElement.insertBefore(scriptControlSectionItem, firstSectionItem);
 
-        // add event listeners to start the script
+        // add event listener to start the script
         document.querySelector("#startAutomatically").addEventListener("click", () => {
             localStorage.setItem("ECTScript-running", "true");
-            localStorage.setItem("ECTScript-manually", "false");
             runMainCoursePage();
-        });
-        document.querySelector("#startManually").addEventListener("click", () => {
-            runMainCoursePage();
-            localStorage.setItem("ECTScript-running", "true");
-            localStorage.setItem("ECTScript-manually", "true");
         });
     }
 
@@ -124,10 +110,8 @@
     }
 
     function startModule() {
-        if (!Boolean(localStorage.getItem("ECTScript-manually"))) {
-            const startButton = document.querySelector("#n");
-            startButton.click();
-        }
+        const startButton = document.querySelector("#n");
+        startButton.click();
     }
 
     async function delay(ms) {
@@ -139,7 +123,7 @@
     }
 
     async function runPlayerPage() {
-        const running = localStorage.getItem("ECTScript-manually") || localStorage.getItem("ECTScript-running");
+        const running = localStorage.getItem("ECTScript-running");
         if (!running) return;
 
         // wait until loaded
