@@ -59,6 +59,7 @@
                   Start the ECTScript (you will complete all modules automatically)
                 </span>
             </div>
+            <div id="ECTScript-messages"> </div>
         `;
 
 
@@ -105,9 +106,11 @@
             const currentCompletionWrapper = allCompletionWrappers[i];
             const currentCompletion = currentCompletionWrapper.querySelector(':scope > button');
             if (currentCompletion.innerText.includes("Erledigt")) {
-                const completedMessage = document.createElement("div");
-                completedMessage.innerText = "Module " + (i + 1) + " completed";
-                document.querySelector("#ECTSettings").appendChild(completedMessage);
+                const completedMessage = "Module " + (i + 1) + " completed\n";
+                const messages = document.querySelector("#ECTScript-messages");
+                if (!messages.innerText.includes(completedMessage)) {
+                    messages.innerText += completedMessage;
+                }
                 console.log("ECTScript: COMPLETED!\n    module " + (i + 1) + " completed!");
                 continue;
             } else {
