@@ -131,7 +131,14 @@
         }
     }
 
+    function checkIfScriptRunning() {
+        //returns true if the script is running, false if it isn't
+        const running = localStorage.getItem("ECTScript-running");
+        return running && typeof running === "boolean";
+    }
+
     function startModule() {
+        if (!checkIfScriptRunning()) return;
         const startButton = document.querySelector("#n");
         startButton.click();
     }
@@ -145,8 +152,7 @@
     }
 
     async function runPlayerPage() {
-        const running = localStorage.getItem("ECTScript-running");
-        if (!running) return;
+        if (!checkIfScriptRunning()) return;
 
         // wait until loaded
         function getApp() {
