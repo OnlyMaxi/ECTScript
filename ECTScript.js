@@ -236,7 +236,7 @@
             while (!page) {
                 await delay(100);
             }
-            page.parentElement.scrollBy(0, 100000);
+            scrollDown(page.parentElement);
 
             //iterate through each action, if it isn't possible, another action is needed
 
