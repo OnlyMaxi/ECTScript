@@ -12,6 +12,23 @@
 (function() {
     'use strict';
 
+    async function delay(ms) {
+        await new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function tick() {
+        await delay(0);
+    }
+
+    function checkIfScriptRunning() {
+        const running = localStorage.getItem("ECTScript-running");
+        return running === "true";
+    }
+
+    function scrollDown(element) {
+        element.scrollTop = element.scrollHeight;
+    }
+
     function init() {
         if (window.location.origin !== "https://tuwel.tuwien.ac.at") return;
 
@@ -33,10 +50,11 @@
             return false;
         }
 
+
         const path = window.location.pathname;
 
         if (path === "/course/view.php" && hasCourseTitle()) {
-            initMainPage();
+            initCoursePage();
         } else if (path === "/mod/scorm/view.php" && hasCourseBreadcrumb()) {
             startModule();
         } else if (path === "/mod/scorm/player.php" && hasCourseBreadcrumb()) {
@@ -44,8 +62,8 @@
         }
     }
 
-    function initMainPage() {
-        // create settings div
+    function initCoursePage() {
+        //create settings div
         const scriptControlSectionItem = document.createElement("div")
         scriptControlSectionItem.classList.add("section-item");
         scriptControlSectionItem.id = "ECTSettings"
@@ -65,55 +83,50 @@
 
         const style = document.createElement("style");
         style.textContent = `
-        #ECTScript-heading {
-            font-size: 1.3rem;
-        }
-        
-        #ECTScript-start {
-            color: #006699;
-        }
-        
-        #ECTScript-start:hover {
-            text-decoration: underline;
-            cursor: pointer;
-        }
-        
-        #ECTScript-messages {
-            color: #33bb33;
-        }
-    `;
+            #ECTScript-heading {
+                font-size: 1.3rem;
+            }
+            
+            #ECTScript-start {
+                color: #006699;
+            }
+            
+            #ECTScript-start:hover {
+                text-decoration: underline;
+                cursor: pointer;
+            }
+            
+            #ECTScript-messages {
+                color: #33bb33;
+            }
+        `;
+
+        //apply style and controls element
         document.head.appendChild(style);
+        document.querySelector("#section-0").prepend(scriptControlSectionItem);
 
-        const firstSectionItem = document.querySelector(".section-item");
-        firstSectionItem.parentElement.insertBefore(scriptControlSectionItem, firstSectionItem);
-
-        // add event listener to start the script
+        //add event listener to start the script
         document.querySelector("#ECTScript-start").addEventListener("click", () => {
             localStorage.setItem("ECTScript-running", "true");
-            runMainCoursePage();
+            runCoursePage();
         });
     }
 
-    function runMainCoursePage() {
+    function runCoursePage() {
         const allSectionItems = document.querySelectorAll(".section-item");
         const allCompletionWrappers = document.querySelectorAll(".dropdown.completion-dropdown");
         const allActivityNameLinks = document.querySelectorAll(".activityname > a");
-        if (allSectionItems.length !== 9) {
-            console.log("ECTScript: ERROR!\n    Not the right amount of sections, you might be in the wrong course!");
-            return;
-        }
         for (let i = 0; i < 5; i++) {
             //search for completion
             const currentSection = allSectionItems[i + 3];
             const currentCompletionWrapper = allCompletionWrappers[i];
-            const currentCompletion = currentCompletionWrapper.querySelector(':scope > button');
+            const currentCompletion = currentCompletionWrapper.querySelector(":scope > button");
             if (currentCompletion.innerText.includes("Erledigt")) {
                 const completedMessage = "Module " + (i + 1) + " completed\n";
                 const messages = document.querySelector("#ECTScript-messages");
                 if (!messages.innerText.includes(completedMessage)) {
                     messages.innerText += completedMessage;
                 }
-                console.log("ECTScript: COMPLETED!\n    module " + (i + 1) + " completed!");
                 continue;
             } else {
                 if (i == 0) {
@@ -131,28 +144,60 @@
         }
     }
 
-    function checkIfScriptRunning() {
-        //returns true if the script is running, false if it isn't
-        const running = localStorage.getItem("ECTScript-running");
-        return running && typeof running === "boolean";
-    }
-
     function startModule() {
         if (!checkIfScriptRunning()) return;
+
         const startButton = document.querySelector("#n");
         startButton.click();
     }
 
-    async function delay(ms) {
-        await new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    async function tick() {
-        await delay(0);
-    }
-
     async function runPlayerPage() {
         if (!checkIfScriptRunning()) return;
+
+        async function clickContinueButton() {
+            if (!checkIfScriptRunning()) return false;
+            const continueBtn = page.querySelector(".continue-btn");
+            if (continueBtn) {
+                continueBtn.click();
+                await tick();
+                retries = initialRetries;
+                return true;
+            }
+            return false;
+        }
+
+        async function clickNextLink() {
+            if (!checkIfScriptRunning()) return false;
+            const nextLink = page.querySelector(".next-lesson__link");
+            if (nextLink) {
+
+                nextLink.click();
+                await tick();
+                retries = initialRetries;
+                return true;
+            }
+            return false;
+        }
+
+        async function solveFlashCards() {
+            if (!checkIfScriptRunning()) return false;
+            if (!page.querySelector(".block-flashcards:not(.ECTScript--done)")) return false; //all flashcards done
+            while (page.querySelector(".continue-hint")) {
+                const flipIcon = page.querySelector(".flip-icon:not(.ECTScript--done)");
+                flipIcon.click();
+                flipIcon.classList.add("ECTScript--done");
+                const nextArrow = page.querySelector(".block-flashcards-slider__arrow--next");
+                if (nextArrow) nextArrow.click(); //sometimes all flashcards are displayed instantly
+                scrollDown(page.parentElement);
+                await tick();
+            }
+            retries = initialRetries;
+            page.querySelector(".block-flashcards:not(.ECTScript--done)").classList.add("ECTScript--done");
+            return true;
+        }
+
+        //sometimes the main page needs to be scrolled down or it doesn't register some of the buttons
+        scrollDown(document.querySelector("#page"));
 
         // wait until loaded
         function getApp() {
@@ -162,6 +207,7 @@
             if (!cf) return null;
             return cf.contentDocument.querySelector('#app')
         }
+
         let app;
         while (!(app = getApp())) {
             await delay(100);
@@ -180,36 +226,25 @@
 
         // complete module
         let page;
+
+        const initialRetries = 5;
+        let retries = initialRetries;
+
         while (true) {
+            if (!checkIfScriptRunning()) return;
             page = app.querySelector('#page-wrap > main:first-of-type');
             while (!page) {
                 await delay(100);
             }
             page.parentElement.scrollBy(0, 100000);
 
-            await tick();
+            //iterate through each action, if it isn't possible, another action is needed
 
-            const knowledgeBlock = page.querySelector('.block-knowledge:not(.block-knowledge--answered)');
-            if (knowledgeBlock) {
-                const didSolve = await solveKnowledgeBlock(knowledgeBlock);
-                if (!didSolve) {
-                    // todo: better error handling
-                    console.error('Knowledge block not completed correctly!');
-                    return;
-                }
-            }
+            if (await clickContinueButton()) continue;
+            if (await clickNextLink()) continue;
+            if (await solveFlashCards()) continue;
 
-            const nextCardSelector = '.block-flashcards-slider__arrow--next:not([aria-disabled="true"])';
-            const flashcards = page.querySelector(`.block-flashcards-slider__wrap:not(${nextCardSelector})`);
-            if (flashcards) {
-                let flashcardNext;
-                while (flashcardNext = page.querySelector(nextCardSelector)) {
-                    const activeCard = flashcards.querySelector('.slick-active');
-                    activeCard.querySelector('.block-flashcard__front').click();
-                    flashcardNext.click();
-                    await tick();
-                }
-            }
+
 
             const activeCardSelector = '.process-card--active';
             const finalCardSelector = '.process-card--summary';
@@ -239,15 +274,10 @@
                 }
             }
 
-            const nextLink = page.querySelector('.next-lesson__link');
-            if (nextLink) {
-                nextLink.click();
-                continue;
-            }
-
-            const continueBtn = page.querySelector('.continue-btn');
-            if (continueBtn) {
-                continueBtn.click();
+            //basic error prevention: retry 5 times after a delay of 100ms
+            if (Number(retries) > 0) {
+                retries--;
+                await delay(100);
                 continue;
             }
 
@@ -336,7 +366,7 @@
         } else if (quizCard.querySelector('.quiz-fill')) {
             const input = quizCard.querySelector('.quiz-fill__container > input');
             fillReactInput(input, '-');
-            
+
             quizCard.querySelector('.quiz-card__submit > button').click();
 
             const optionsFeedback = quizCard.querySelector('.quiz-fill__options').innerText;
@@ -361,7 +391,7 @@
         } else if (quizCard.querySelector('.quiz-match')) {
             while (solution.length > 0) {
                 const match = solution.shift();
-                
+
                 const draggables = quizCard.querySelectorAll('.quiz-match__item--draggable .quiz-match__item-wrapper');
                 const draggable = Array.from(draggables).find(d => d.querySelector('[data-match-content="true"]').innerText === match.origin);
                 draggable.focus();
@@ -390,7 +420,7 @@
         } else if (quizCard.querySelector('.quiz-fill')) {
             const input = quizCard.querySelector('.quiz-fill__container > input');
             fillReactInput(input, solution);
-            
+
             quizCard.querySelector('.quiz-card__submit > button').click();
 
             return true;
@@ -398,7 +428,7 @@
 
         return false;
     }
-    
+
     async function solveQuiz(quizWrap) {
         let lastActiveCard = null;
         let activeCard = quizWrap.querySelector('.quiz-item__card--active');
