@@ -69,35 +69,103 @@
         scriptControlSectionItem.id = "ECTSettings"
         scriptControlSectionItem.style.marginBottom = "1rem";
         scriptControlSectionItem.innerHTML = `
-            <div id="ECTScript-heading">
-              ECTScript controls
-            </div>
-            <div>
-                <span id="ECTScript-start">
-                  Start the ECTScript (you will complete all modules automatically)
-                </span>
-            </div>
-            <div id="ECTScript-messages"> </div>
+            <h4 id="ECTScript-heading">ECTScript controls</h4>
+            <p>
+                <a id="ECTScript-start">
+                    Start the ECTScript (you will complete all modules automatically)
+                </a>
+            </p>
+            <details open id="ECTScript-messages-wrapper">
+                <summary>Messages <a id="ECTScript-messages-clear">(Clear)</a></summary>
+                <ul id="ECTScript-messages"></ul>
+            </details>
         `;
 
 
         const style = document.createElement("style");
         style.textContent = `
             #ECTScript-heading {
+                font-weight: normal;
                 font-size: 1.3rem;
+                margin-bottom: .75em;
             }
-            
-            #ECTScript-start {
+
+            #ECTScript-start, #ECTScript-messages-clear {
                 color: #006699;
             }
-            
-            #ECTScript-start:hover {
+
+            #ECTScript-start:hover, #ECTScript-messages-clear:hover {
                 text-decoration: underline;
                 cursor: pointer;
             }
-            
+
+            #ECTScript-messages-wrapper {
+                interpolate-size: allow-keywords;
+                transition: height 500ms ease;
+            }
+
+            #ECTScript-messages-wrapper::details-content {
+                transition: height 0.5s ease, content-visibility 0.5s ease allow-discrete;
+                height: 0;
+                overflow: clip;
+
+                padding-left: .9em;
+            }
+
+            #ECTScript-messages-wrapper[open]::details-content {
+                height: auto;
+            }
+
             #ECTScript-messages {
-                color: #33bb33;
+                list-style-type: none;
+                padding: 0;
+                max-height: 10em;
+                overflow: auto;
+            }
+
+            .ECTScript-message {
+                padding-left: .5em;
+                font-size: .75em;
+                word-break: break-word;
+                border-width: 1px;
+                border-left-style: solid;
+                border-right-style: solid;
+            }
+            .ECTScript-message:first-child {
+                border-top-style: solid;
+            }
+            .ECTScript-message:last-child {
+                border-bottom-style: solid;
+            }
+
+            .ECTScript-message-type-info {
+                background: var(--bs-info-bg-subtle);
+                color: var(--bs-info-text-emphasis);
+                border-color: var(--bs-info-border-subtle);
+            }
+
+            .ECTScript-message-type-warning {
+                background: var(--bs-warning-bg-subtle);
+                color: var(--bs-warning-text-emphasis);
+                border-color: var(--bs-warning-border-subtle);
+            }
+
+            .ECTScript-message-type-error {
+                background: var(--bs-danger-bg-subtle);
+                color: var(--bs-danger-text-emphasis);
+                border-color: var(--bs-danger-border-subtle);
+            }
+
+            .ECTScript-message-type-success {
+                background: var(--bs-success-bg-subtle);
+                color: var(--bs-success-text-emphasis);
+                border-color: var(--bs-success-border-subtle);
+            }
+
+            .ECTScript-message-time {
+                display: inline-block;
+                color: grey;
+                margin-right: .5em;
             }
         `;
 
@@ -108,8 +176,84 @@
         //add event listener to start the script
         document.querySelector("#ECTScript-start").addEventListener("click", () => {
             localStorage.setItem("ECTScript-running", "true");
+            logInfo('Script started');
             runCoursePage();
         });
+
+        document.querySelector('#ECTScript-messages-clear').addEventListener('click', e => {
+            e.preventDefault();
+            clearLog();
+        });
+
+        loadLog();
+    }
+
+    function showMessage(message) {
+        const messageList = document.querySelector('#ECTScript-messages');
+        if (!messageList) return false;
+        const messageElement = document.createElement('li');
+        messageElement.classList.add('ECTScript-message');
+        messageElement.classList.add('ECTScript-message-type-' + message.type);
+        const timeElement = document.createElement('span');
+        timeElement.classList.add('ECTScript-message-time');
+        timeElement.innerText = message.date.toLocaleString();
+        messageElement.appendChild(timeElement);
+        const textElement = document.createElement('span');
+        textElement.innerText = message.text;
+        messageElement.appendChild(textElement);
+        messageList.prepend(messageElement);
+        return true;
+    }
+
+    function getMessages() {
+        let messages;
+        try {
+            messages = JSON.parse(localStorage.getItem('ECTScript-messages'));
+            for (const message of messages) {
+                message.date = new Date(message.date);
+            }
+        } catch (e) {}
+        if (!Array.isArray(messages)) {
+            messages = [];
+        }
+        return messages;
+    }
+
+    function loadLog() {
+        for (const message of getMessages()) {
+            showMessage(message);
+        }
+    }
+
+    function writeLog(message) {
+        message.date ??= new Date();
+
+        const messages = getMessages();
+        messages.push(message);
+        localStorage.setItem('ECTScript-messages', JSON.stringify(messages));
+
+        showMessage(message);
+    }
+
+    function logInfo(text) {
+        writeLog({ type: 'info', text });
+    }
+
+    function logWarning(text) {
+        writeLog({ type: 'warning', text });
+    }
+
+    function logError(text) {
+        writeLog({ type: 'error', text });
+    }
+
+    function logSuccess(text) {
+        writeLog({ type: 'success', text });
+    }
+
+    function clearLog() {
+        localStorage.removeItem('ECTScript-messages');
+        document.querySelector('#ECTScript-messages').innerHTML = '';
     }
 
     function runCoursePage() {
@@ -123,10 +267,7 @@
             const currentCompletion = currentCompletionWrapper.querySelector(":scope > button");
             if (currentCompletion.innerText.includes("Erledigt")) {
                 const completedMessage = "Module " + (i + 1) + " completed\n";
-                const messages = document.querySelector("#ECTScript-messages");
-                if (!messages.innerText.includes(completedMessage)) {
-                    messages.innerText += completedMessage;
-                }
+                logInfo(completedMessage);
                 continue;
             } else {
                 if (i == 0) {
@@ -269,7 +410,7 @@
                 const fullScore = await solveQuiz(quizWrap);
                 if (!fullScore) {
                     // todo: better error handling
-                    console.error('Quiz not completed with full score!');
+                    logError('Quiz not completed with full score!');
                     return;
                 }
             }
@@ -286,7 +427,7 @@
 
         if (!isLastPage(page)) {
             // todo: better error handling
-            console.error('Nothing to do, but module does not seem completed!');
+            logError('Nothing to do, but module does not seem completed!');
             return;
         }
 
