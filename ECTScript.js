@@ -190,7 +190,7 @@
 
     function showMessage(message) {
         const messageList = document.querySelector('#ECTScript-messages');
-        if (!messageList) return false;
+        if (!messageList) return;
         const messageElement = document.createElement('li');
         messageElement.classList.add('ECTScript-message');
         messageElement.classList.add('ECTScript-message-type-' + message.type);
@@ -201,8 +201,11 @@
         const textElement = document.createElement('span');
         textElement.innerText = message.text;
         messageElement.appendChild(textElement);
-        messageList.prepend(messageElement);
-        return true;
+        const isScrolled = messageList.scrollTop + messageList.clientHeight >= messageList.scrollHeight - 5;
+        messageList.appendChild(messageElement);
+        if (isScrolled) {
+            scrollDown(messageList);
+        }
     }
 
     function getMessages() {
