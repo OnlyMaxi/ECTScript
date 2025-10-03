@@ -20,13 +20,28 @@
         await delay(0);
     }
 
-    function checkIfScriptRunning() {
-        const running = localStorage.getItem("ECTScript-running");
-        return running === "true";
+    // can either be 'single' or 'all'
+    function setRunningType(type) {
+        localStorage.setItem('ECTScript-running', type);
+        document.dispatchEvent(new CustomEvent('ECTScript-running-update'));
+    }
+
+    // can either be 'single' or 'all'
+    function getRunningType() {
+        return localStorage.getItem("ECTScript-running");
+    }
+
+    function clearRunningType() {
+        localStorage.removeItem('ECTScript-running');
+        document.dispatchEvent(new CustomEvent('ECTScript-running-update'));
     }
 
     function scrollDown(element) {
         element.scrollTop = element.scrollHeight;
+    }
+
+    function reload() {
+        window.location.reload();
     }
 
     function init() {
@@ -56,24 +71,122 @@
         if (path === "/course/view.php" && hasCourseTitle()) {
             initCoursePage();
         } else if (path === "/mod/scorm/view.php" && hasCourseBreadcrumb()) {
-            startModule();
+            initStartModulePage();
         } else if (path === "/mod/scorm/player.php" && hasCourseBreadcrumb()) {
-            runPlayerPage();
+            initPlayerPage();
         }
     }
 
     function initCoursePage() {
-        //create settings div
-        const scriptControlSectionItem = document.createElement("div")
-        scriptControlSectionItem.classList.add("section-item");
-        scriptControlSectionItem.id = "ECTSettings"
-        scriptControlSectionItem.style.marginBottom = "1rem";
-        scriptControlSectionItem.innerHTML = `
+        attachStylesheet();
+
+        const controlsElement = createControlsElement({
+            startActionHint: 'you will complete all modules automatically',
+            startAction: () => {
+                setRunningType("all");
+                logInfo('Script started for all modules.');
+                openNextModule();
+            }
+        });
+        controlsElement.classList.add("section-item");
+        controlsElement.style.marginBottom = "1rem";
+        document.querySelector("#section-0").prepend(controlsElement);
+
+        if (getRunningType() === 'all') {
+            openNextModule();
+        }
+    }
+
+    function openNextModule() {
+        const allSectionItems = document.querySelectorAll(".section-item");
+        const allCompletionWrappers = document.querySelectorAll(".dropdown.completion-dropdown");
+        const allActivityNameLinks = document.querySelectorAll(".activityname > a");
+        for (let i = 0; i < 5; i++) {
+            // search for completion
+            const currentSection = allSectionItems[i + 3];
+            const currentCompletionWrapper = allCompletionWrappers[i];
+            const currentCompletion = currentCompletionWrapper.querySelector(":scope > button");
+            if (currentCompletion.innerText.includes("Erledigt")) {
+                const completedMessage = "Module " + (i + 1) + " completed\n";
+                logInfo(completedMessage);
+                continue;
+            } else {
+                if (i == 0) {
+                    //allActivityNameLinks[0].click();
+                } else if (i == 1) {
+                    //allActivityNameLinks[2].click();
+                } else if (i == 2) {
+                    //allActivityNameLinks[5].click();
+                } else if (i == 3) {
+                    //allActivityNameLinks[7].click();
+                } else if (i == 4) {
+                    //allActivityNameLinks[8].click();
+                }
+            }
+        }
+    }
+
+    function initStartModulePage() {
+        attachStylesheet();
+
+        const moduleName = document.querySelector('h1').innerText.split('"')[1];
+
+        const controlsElement = createControlsElement({
+            startActionHint: `you will complete this module automatically: ${moduleName}`,
+            startAction: () => {
+                setRunningType('single');
+                logInfo(`Script started for single module: ${moduleName}`);
+                startModule();
+            }
+        });
+        controlsElement.classList.add('activity-header');
+        controlsElement.style.padding = '1em';
+        document.querySelector('#region-main').prepend(controlsElement);
+
+        if (getRunningType() == 'all') {
+            startModule();
+        }
+    }
+
+    function startModule() {
+        const startButton = document.querySelector("#n");
+        startButton.click();
+    }
+
+    async function initPlayerPage() {
+        attachStylesheet();
+
+        const moduleName = document.querySelector('h1').innerText.split('"')[1];
+
+        const controlsElement = createControlsElement({
+            startActionHint: `you will complete this module automatically: ${moduleName}`,
+            startAction: () => {
+                setRunningType('single');
+                logInfo(`Script started for single module: ${moduleName}`);
+                runPlayer(moduleName);
+            }
+        });
+        controlsElement.classList.add('activity-header');
+        controlsElement.style.padding = '1em';
+        document.querySelector('#region-main').prepend(controlsElement);
+
+        if (getRunningType()) {
+            try {
+                await runPlayer(moduleName);
+            } catch(e) {
+                logError(e);
+                clearRunningType();
+           }
+        }
+    }
+
+    function createControlsElement(options) {
+        const controlsElement = document.createElement("div");
+        controlsElement.id = "ECTSettings";
+        controlsElement.innerHTML = `
             <h4 id="ECTScript-heading">ECTScript controls</h4>
             <p>
-                <a id="ECTScript-start">
-                    Start the ECTScript (you will complete all modules automatically)
-                </a>
+                <a id="ECTScript-action"></a>
             </p>
             <details open id="ECTScript-messages-wrapper">
                 <summary>Messages <a id="ECTScript-messages-clear">(Clear)</a></summary>
@@ -81,7 +194,46 @@
             </details>
         `;
 
+        controlsElement.querySelector('#ECTScript-messages-clear').addEventListener('click', e => {
+            e.preventDefault();
+            clearLog(controlsElement);
+        });
+        loadLog(controlsElement);
 
+        const actionButton = controlsElement.querySelector("#ECTScript-action");
+
+        let action;
+
+        function updateActionButton() {
+            if (!getRunningType()) {
+                actionButton.innerText = `Start the ECTScript (${options.startActionHint})`;
+                actionButton.className = "ECTScript-action-start";
+                action = options.startAction;
+            } else {
+                actionButton.innerText = `Stop the ECTScript`;
+                actionButton.className = "ECTScript-action-stop";
+                action = () => {
+                    clearRunningType();
+                    logInfo('Script stopped.')
+                    reload();
+                };
+            }
+        }
+
+        document.addEventListener('ECTScript-running-update', () => {
+            updateActionButton();
+        });
+
+        updateActionButton();
+
+        actionButton.addEventListener("click", () => {
+            action();
+        });
+
+        return controlsElement;
+    }
+
+    function attachStylesheet() {
         const style = document.createElement("style");
         style.textContent = `
             #ECTScript-heading {
@@ -90,11 +242,15 @@
                 margin-bottom: .75em;
             }
 
-            #ECTScript-start, #ECTScript-messages-clear {
+            .ECTScript-action-start, #ECTScript-messages-clear {
                 color: #006699;
             }
 
-            #ECTScript-start:hover, #ECTScript-messages-clear:hover {
+            .ECTScript-action-stop {
+                color: #cc0033;
+            }
+
+            #ECTScript-action:hover, #ECTScript-messages-clear:hover {
                 text-decoration: underline;
                 cursor: pointer;
             }
@@ -168,28 +324,11 @@
                 margin-right: .5em;
             }
         `;
-
-        //apply style and controls element
         document.head.appendChild(style);
-        document.querySelector("#section-0").prepend(scriptControlSectionItem);
-
-        //add event listener to start the script
-        document.querySelector("#ECTScript-start").addEventListener("click", () => {
-            localStorage.setItem("ECTScript-running", "true");
-            logInfo('Script started');
-            runCoursePage();
-        });
-
-        document.querySelector('#ECTScript-messages-clear').addEventListener('click', e => {
-            e.preventDefault();
-            clearLog();
-        });
-
-        loadLog();
     }
 
-    function showMessage(message) {
-        const messageList = document.querySelector('#ECTScript-messages');
+    function showMessage(message, controlsElement = document) {
+        const messageList = controlsElement.querySelector('#ECTScript-messages');
         if (!messageList) return;
         const messageElement = document.createElement('li');
         messageElement.classList.add('ECTScript-message');
@@ -222,9 +361,9 @@
         return messages;
     }
 
-    function loadLog() {
+    function loadLog(controlsElement) {
         for (const message of getMessages()) {
-            showMessage(message);
+            showMessage(message, controlsElement);
         }
     }
 
@@ -239,67 +378,44 @@
     }
 
     function logInfo(text) {
-        writeLog({ type: 'info', text });
+        console.log('ECTScript:', text);
+        writeLog({ type: 'info', text: `${text}` });
     }
 
     function logWarning(text) {
-        writeLog({ type: 'warning', text });
+        console.warn('ECTScript:', text);
+        writeLog({ type: 'warning', text: `${text}` });
     }
 
     function logError(text) {
-        writeLog({ type: 'error', text });
+        console.error('ECTScript:', text);
+        writeLog({ type: 'error', text: `${text}` });
     }
 
     function logSuccess(text) {
-        writeLog({ type: 'success', text });
+        console.log('%cECTScript:', 'color: #bada55', text);
+        writeLog({ type: 'success', text: `${text}` });
     }
 
-    function clearLog() {
+    function clearLog(controlsElement = document) {
         localStorage.removeItem('ECTScript-messages');
-        document.querySelector('#ECTScript-messages').innerHTML = '';
+        controlsElement.querySelector('#ECTScript-messages').innerHTML = '';
     }
 
-    function runCoursePage() {
-        const allSectionItems = document.querySelectorAll(".section-item");
-        const allCompletionWrappers = document.querySelectorAll(".dropdown.completion-dropdown");
-        const allActivityNameLinks = document.querySelectorAll(".activityname > a");
-        for (let i = 0; i < 5; i++) {
-            //search for completion
-            const currentSection = allSectionItems[i + 3];
-            const currentCompletionWrapper = allCompletionWrappers[i];
-            const currentCompletion = currentCompletionWrapper.querySelector(":scope > button");
-            if (currentCompletion.innerText.includes("Erledigt")) {
-                const completedMessage = "Module " + (i + 1) + " completed\n";
-                logInfo(completedMessage);
-                continue;
-            } else {
-                if (i == 0) {
-                    //allActivityNameLinks[0].click();
-                } else if (i == 1) {
-                    //allActivityNameLinks[2].click();
-                } else if (i == 2) {
-                    //allActivityNameLinks[5].click();
-                } else if (i == 3) {
-                    //allActivityNameLinks[7].click();
-                } else if (i == 4) {
-                    //allActivityNameLinks[8].click();
-                }
+    async function waitForSelector(parent, selector, timeout = 5000) {
+        const start = Date.now();
+        let element;
+        while (!(element = parent.querySelector(selector))) {
+            await delay(100);
+            if (Date.now() - start > timeout) {
+                throw new Error('Timeout waiting for element with selector: ' + selector);
             }
         }
+        return element;
     }
 
-    function startModule() {
-        if (!checkIfScriptRunning()) return;
-
-        const startButton = document.querySelector("#n");
-        startButton.click();
-    }
-
-    async function runPlayerPage() {
-        if (!checkIfScriptRunning()) return;
-
+    async function runPlayer(moduleName) {
         async function clickContinueButton() {
-            if (!checkIfScriptRunning()) return false;
             const continueBtn = page.querySelector(".continue-btn");
             if (continueBtn) {
                 continueBtn.click();
@@ -311,10 +427,8 @@
         }
 
         async function clickNextLink() {
-            if (!checkIfScriptRunning()) return false;
-            const nextLink = page.querySelector(".next-lesson__link");
+            const nextLink = pageWrap.querySelector('.next-lesson__link, [data-link="lesson-link-item"][data-direction="next"]');
             if (nextLink) {
-
                 nextLink.click();
                 await tick();
                 retries = initialRetries;
@@ -324,14 +438,13 @@
         }
 
         async function solveFlashCards() {
-            if (!checkIfScriptRunning()) return false;
-            if (!page.querySelector(".block-flashcards:not(.ECTScript--done)")) return false; //all flashcards done
+            if (!page.querySelector(".block-flashcards:not(.ECTScript--done)")) return false; // all flashcards done
             while (page.querySelector(".continue-hint")) {
                 const flipIcon = page.querySelector(".flip-icon:not(.ECTScript--done)");
                 flipIcon.click();
                 flipIcon.classList.add("ECTScript--done");
                 const nextArrow = page.querySelector(".block-flashcards-slider__arrow--next");
-                if (nextArrow) nextArrow.click(); //sometimes all flashcards are displayed instantly
+                if (nextArrow) nextArrow.click(); // sometimes all flashcards are displayed instantly
                 scrollDown(page.parentElement);
                 await tick();
             }
@@ -340,49 +453,36 @@
             return true;
         }
 
-        //sometimes the main page needs to be scrolled down or it doesn't register some of the buttons
+        // sometimes the main page needs to be scrolled down or it doesn't register some of the buttons
         scrollDown(document.querySelector("#page"));
 
         // wait until loaded
-        function getApp() {
-            const so = document.querySelector('#scorm_object');
-            if (!so) return null;
-            const cf = so.contentDocument.querySelector('#content-frame');
-            if (!cf) return null;
-            return cf.contentDocument.querySelector('#app')
-        }
-
-        let app;
-        while (!(app = getApp())) {
-            await delay(100);
-        }
+        const scormObject = await waitForSelector(document, '#scorm_object');
+        const contentFrame = await waitForSelector(scormObject.contentDocument, '#content-frame');
+        const app = await waitForSelector(contentFrame.contentDocument, '#app');
 
         // start from the first lesson
-        function getFirstLessonLink() {
-            return app.querySelector('.lesson-lists__list > li:first-of-type a')
-                || app.querySelector('.overview-list__list > li:first-of-type a');
-        }
-        let firstLessonLink;
-        while (!(firstLessonLink = getFirstLessonLink())) {
-            await delay(100);
-        }
+        const firstLessonLink = await waitForSelector(
+            app,
+            '.lesson-link'
+            + ',.overview-list-item__link'
+            + ',[data-link="lesson-link-item"]'
+        );
         firstLessonLink.click();
 
         // complete module
+        let pageWrap = await waitForSelector(app, '#page-wrap');
+
         let page;
 
         const initialRetries = 5;
         let retries = initialRetries;
 
         while (true) {
-            if (!checkIfScriptRunning()) return;
-            page = app.querySelector('#page-wrap > main:first-of-type');
-            while (!page) {
-                await delay(100);
-            }
-            scrollDown(page.parentElement);
+            page = await waitForSelector(pageWrap, 'main:first-of-type');
+            scrollDown(pageWrap);
 
-            //iterate through each action, if it isn't possible, another action is needed
+            // iterate through each action, if it isn't possible, another action is needed
 
             if (await clickContinueButton()) continue;
             if (await clickNextLink()) continue;
@@ -395,7 +495,7 @@
             const activeFinalCardSelector = activeCardSelector + finalCardSelector;
             const processBlock = page.querySelector(`.block-process:not(${activeFinalCardSelector})`);
             if (processBlock) {
-                processBlock.querySelector('.process-card__button').click();
+                processBlock.querySelector('button, .process-card__button, process-card__start').click();
 
                 while (!processBlock.querySelector(activeFinalCardSelector)) {
                     const activeCard = processBlock.querySelector(activeCardSelector);
@@ -412,13 +512,11 @@
             if (quizWrap) {
                 const fullScore = await solveQuiz(quizWrap);
                 if (!fullScore) {
-                    // todo: better error handling
-                    logError('Quiz not completed with full score!');
-                    return;
+                    throw new Error('Quiz not completed with full score!');
                 }
             }
 
-            //basic error prevention: retry 5 times after a delay of 100ms
+            // basic error prevention: retry 5 times after a delay of 100ms
             if (Number(retries) > 0) {
                 retries--;
                 await delay(100);
@@ -429,16 +527,19 @@
         }
 
         if (!isLastPage(page)) {
-            // todo: better error handling
-            logError('Nothing to do, but module does not seem completed!');
-            return;
+            throw new Error('Nothing to do, but module does not seem completed!');
         }
 
         // works without it, but just to be sure, the request goes through
         await delay(500);
 
-        // close module
-        document.querySelector('div[role="main"] .btn[href^="https://tuwel.tuwien.ac.at/course/view.php"]').click();
+        logSuccess(`Module completed: ${moduleName}`);
+        if (getRunningType() === 'single') {
+            clearRunningType();
+        } else {
+            // close module
+            document.querySelector('div[role="main"] .btn[href^="https://tuwel.tuwien.ac.at/course/view.php"]').click();
+        }
     }
 
     function isLastPage(page) {
