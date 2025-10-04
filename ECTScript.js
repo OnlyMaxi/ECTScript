@@ -153,7 +153,7 @@
         startButton.click();
     }
 
-    async function initPlayerPage() {
+    function initPlayerPage() {
         attachStylesheet();
 
         const moduleName = document.querySelector('h1').innerText.split('"')[1];
@@ -171,12 +171,7 @@
         document.querySelector('#region-main').prepend(controlsElement);
 
         if (getRunningType()) {
-            try {
-                await runPlayer(moduleName);
-            } catch(e) {
-                logError(e);
-                clearRunningType();
-           }
+            runPlayer(moduleName);
         }
     }
 
@@ -405,7 +400,16 @@
     async function waitForSelector(parent, selector, timeout = 5000) {
         const start = Date.now();
         let element;
-        while (!(element = parent.querySelector(selector))) {
+        while (true) {
+            if (typeof selector === 'function') {
+                element = selector(parent);
+            } else {
+                element = parent.querySelector(selector);
+            }
+            if (element) {
+                break;
+            }
+
             await delay(100);
             if (Date.now() - start > timeout) {
                 throw new Error('Timeout waiting for element with selector: ' + selector);
@@ -415,12 +419,22 @@
     }
 
     async function runPlayer(moduleName) {
+        try {
+            await completePlayer(moduleName);
+        } catch(e) {
+            logError(e);
+            clearRunningType();
+       }
+    }
+
+    async function completePlayer(moduleName) {
+        let page;
+
         async function clickContinueButton() {
             const continueBtn = page.querySelector(".continue-btn");
             if (continueBtn) {
                 continueBtn.click();
                 await tick();
-                retries = initialRetries;
                 return true;
             }
             return false;
@@ -431,7 +445,6 @@
             if (nextLink) {
                 nextLink.click();
                 await tick();
-                retries = initialRetries;
                 return true;
             }
             return false;
@@ -448,18 +461,42 @@
                 scrollDown(page.parentElement);
                 await tick();
             }
-            retries = initialRetries;
             page.querySelector(".block-flashcards:not(.ECTScript--done)").classList.add("ECTScript--done");
             return true;
         }
 
-        // sometimes the main page needs to be scrolled down or it doesn't register some of the buttons
-        scrollDown(document.querySelector("#page"));
+        async function solveProcessBlocks() {
+            const activeCardSelector = '.process-card--active';
+            const finalCardSelector = '.process-card--summary';
+            const activeFinalCardSelector = activeCardSelector + finalCardSelector;
+
+            const processBlock = page.querySelector(`.block-process:not(${activeFinalCardSelector})`);
+            if (!processBlock) return false;
+
+            processBlock.querySelector('button, .process-card__button, process-card__start').click();
+            while (!processBlock.querySelector(activeFinalCardSelector)) {
+                const activeCard = processBlock.querySelector(activeCardSelector);
+                const tabNext = activeCard.querySelector('.process-counter__item--active + .process-counter__item');
+                tabNext.click();
+                while (activeCard === processBlock.querySelector(activeCardSelector)) {
+                    await delay(100);
+                    tabNext.click();
+                }
+            }
+            return true;
+        }
+
+        // // sometimes the main page needs to be scrolled down or it doesn't register some of the buttons
+        // scrollDown(document.querySelector("#page"));
 
         // wait until loaded
-        const scormObject = await waitForSelector(document, '#scorm_object');
-        const contentFrame = await waitForSelector(scormObject.contentDocument, '#content-frame');
-        const app = await waitForSelector(contentFrame.contentDocument, '#app');
+        const app = await waitForSelector(document, (parent) => {
+            const so = parent.querySelector('#scorm_object');
+            if (!so) return null;
+            const cf = so.contentDocument.querySelector('#content-frame');
+            if (!cf) return null;
+            return cf.contentDocument.querySelector('#app')
+        });
 
         // start from the first lesson
         const firstLessonLink = await waitForSelector(
@@ -471,58 +508,25 @@
         firstLessonLink.click();
 
         // complete module
+        const maxRetries = 5;
+
         let pageWrap = await waitForSelector(app, '#page-wrap');
 
-        let page;
-
-        const initialRetries = 5;
-        let retries = initialRetries;
-
+        action:
         while (true) {
             page = await waitForSelector(pageWrap, 'main:first-of-type');
             scrollDown(pageWrap);
 
-            // iterate through each action, if it isn't possible, another action is needed
+            for (let retries = 0; retries < maxRetries; retries++) {
+                // iterate through each action, if it isn't possible, another action is needed
+                if (await clickContinueButton()) continue action;
+                if (await clickNextLink()) continue action;
+                if (await solveFlashCards()) continue action;
+                if (await solveProcessBlocks()) continue action;
+                if (await solveQuizzes(page)) continue action;
 
-            if (await clickContinueButton()) continue;
-            if (await clickNextLink()) continue;
-            if (await solveFlashCards()) continue;
-
-
-
-            const activeCardSelector = '.process-card--active';
-            const finalCardSelector = '.process-card--summary';
-            const activeFinalCardSelector = activeCardSelector + finalCardSelector;
-            const processBlock = page.querySelector(`.block-process:not(${activeFinalCardSelector})`);
-            if (processBlock) {
-                processBlock.querySelector('button, .process-card__button, process-card__start').click();
-
-                while (!processBlock.querySelector(activeFinalCardSelector)) {
-                    const activeCard = processBlock.querySelector(activeCardSelector);
-                    const tabNext = activeCard.querySelector('.process-counter__item--active + .process-counter__item');
-                    tabNext.click();
-                    while (activeCard === processBlock.querySelector(activeCardSelector)) {
-                        await delay(100);
-                        tabNext.click();
-                    }
-                }
-            }
-
-            const quizWrap = page.querySelector('.quiz__wrap');
-            if (quizWrap) {
-                const fullScore = await solveQuiz(quizWrap);
-                if (!fullScore) {
-                    throw new Error('Quiz not completed with full score!');
-                }
-            }
-
-            // basic error prevention: retry 5 times after a delay of 100ms
-            if (Number(retries) > 0) {
-                retries--;
                 await delay(100);
-                continue;
             }
-
             break;
         }
 
@@ -674,7 +678,10 @@
         return false;
     }
 
-    async function solveQuiz(quizWrap) {
+    async function solveQuizzes(page) {
+        const quizWrap = page.querySelector('.quiz__wrap');
+        if (!quizWrap) return false;
+
         let lastActiveCard = null;
         let activeCard = quizWrap.querySelector('.quiz-item__card--active');
 
@@ -747,7 +754,11 @@
         while (!(score = getScore())) {
             await delay(100);
         }
-        return score.innerText === '100%';
+        if (score.innerText !== '100%') {
+            throw new Error('Quiz not completed with full score!');
+        }
+
+        return true;
     }
 
     async function solveKnowledgeBlock(knowledgeBlock) {
