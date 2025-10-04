@@ -432,22 +432,16 @@
 
         async function clickContinueButton() {
             const continueBtn = page.querySelector(".continue-btn");
-            if (continueBtn) {
-                continueBtn.click();
-                await tick();
-                return true;
-            }
-            return false;
+            if (!continueBtn) return false;
+            continueBtn.click();
+            return true;
         }
 
         async function clickNextLink() {
             const nextLink = pageWrap.querySelector('.next-lesson__link, [data-link="lesson-link-item"][data-direction="next"]');
-            if (nextLink) {
-                nextLink.click();
-                await tick();
-                return true;
-            }
-            return false;
+            if (!nextLink) return false;
+            nextLink.click();
+            return true;
         }
 
         async function solveFlashCards() {
@@ -486,9 +480,6 @@
             return true;
         }
 
-        // // sometimes the main page needs to be scrolled down or it doesn't register some of the buttons
-        // scrollDown(document.querySelector("#page"));
-
         // wait until loaded
         const app = await waitForSelector(document, (parent) => {
             const so = parent.querySelector('#scorm_object');
@@ -508,16 +499,18 @@
         firstLessonLink.click();
 
         // complete module
-        const maxRetries = 5;
+        const maxRetries = 10;
+        const retryTimeout = 100;
 
         let pageWrap = await waitForSelector(app, '#page-wrap');
 
         action:
         while (true) {
-            page = await waitForSelector(pageWrap, 'main:first-of-type');
-            scrollDown(pageWrap);
-
             for (let retries = 0; retries < maxRetries; retries++) {
+                page = await waitForSelector(pageWrap, 'main:first-of-type');
+                scrollDown(pageWrap);
+                await tick();
+
                 // iterate through each action, if it isn't possible, another action is needed
                 if (await clickContinueButton()) continue action;
                 if (await clickNextLink()) continue action;
@@ -525,12 +518,11 @@
                 if (await solveProcessBlocks()) continue action;
                 if (await solveQuizzes(page)) continue action;
 
-                await delay(100);
-            }
-            break;
-        }
+                if (isLastPage(page)) break action;
 
-        if (!isLastPage(page)) {
+                await delay(retryTimeout);
+            }
+
             throw new Error('Nothing to do, but module does not seem completed!');
         }
 
