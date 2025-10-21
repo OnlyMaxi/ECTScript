@@ -470,11 +470,11 @@
             processBlock.querySelector('button, .process-card__button, process-card__start').click();
             while (!processBlock.querySelector(activeFinalCardSelector)) {
                 const activeCard = processBlock.querySelector(activeCardSelector);
-                const tabNext = activeCard.querySelector('.process-counter__item--active + .process-counter__item');
-                tabNext.click();
+                const nextBtn = await waitForSelector(activeCard, '.process-counter__item--active + .process-counter__item, process-arrow--right, process-arrow--scrolling');
+                nextBtn.click();
                 while (activeCard === processBlock.querySelector(activeCardSelector)) {
                     await delay(100);
-                    tabNext.click();
+                    nextBtn.click();
                 }
             }
             return true;
@@ -560,6 +560,7 @@
                 checkbox.click();
             }
 
+            await tick();
             quizCard.querySelector('.quiz-card__submit > button').click();
 
             solution = [];
@@ -578,6 +579,7 @@
                 droppables[i].dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true }));
             }
 
+            await tick();
             quizCard.querySelector('.quiz-card__submit > button').click();
 
             solution = [];
@@ -597,6 +599,7 @@
 
             options[0].click();
 
+            await tick();
             quizCard.querySelector('.quiz-card__submit > button').click();
 
             solution = [];
@@ -608,6 +611,7 @@
             const input = quizCard.querySelector('.quiz-fill__container > input');
             fillReactInput(input, '-');
 
+            await tick();
             quizCard.querySelector('.quiz-card__submit > button').click();
 
             const optionsFeedback = quizCard.querySelector('.quiz-fill__options').innerText;
@@ -626,6 +630,7 @@
                 }
             }
 
+            await tick();
             quizCard.querySelector('.quiz-card__submit > button').click();
 
             return true;
@@ -644,6 +649,7 @@
                 droppable.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true }));
             }
 
+            await tick();
             quizCard.querySelector('.quiz-card__submit > button').click();
 
             return true;
@@ -655,6 +661,7 @@
                 }
             }
 
+            await tick();
             quizCard.querySelector('.quiz-card__submit > button').click();
 
             return true;
@@ -662,6 +669,7 @@
             const input = quizCard.querySelector('.quiz-fill__container > input');
             fillReactInput(input, solution);
 
+            await tick();
             quizCard.querySelector('.quiz-card__submit > button').click();
 
             return true;
@@ -705,7 +713,8 @@
             } else {
                 const solution = await collectQuizCardSolution(activeCard);
                 if (solution) {
-                    activeCard.querySelector('.quiz-card__feedback-button > button').click();
+                    const nextBtn = await waitForSelector(activeCard, '.quiz-card__feedback-button > button, quiz-card__button--next');
+                    nextBtn.click();
 
                     solutions.push(solution);
                 }
@@ -732,7 +741,8 @@
             } else {
                 const didApply = await applyQuizCardSolution(activeCard, solutions[0]);
                 if (didApply) {
-                    activeCard.querySelector('.quiz-card__feedback-button > button').click();
+                    const nextBtn = await waitForSelector(activeCard, '.quiz-card__feedback-button > button, quiz-card__button--next');
+                    nextBtn.click();
 
                     solutions.shift();
                 }
