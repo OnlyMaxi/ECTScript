@@ -86,7 +86,7 @@
             startAction: () => {
                 setRunningType('all');
                 logInfo('Script started for all modules.');
-                openNextModule();
+                openNextModule(true);
             },
         });
         controlsElement.classList.add('section-item');
@@ -98,37 +98,36 @@
         }
     }
 
-    function openNextModule() {
-        const allSectionItems = document.querySelectorAll('.section-item');
-        const allCompletionWrappers = document.querySelectorAll(
-            '.dropdown.completion-dropdown',
+    function openNextModule(logCompleted = false) {
+        const activities = document.querySelectorAll(
+            '.activity-item[data-activityname^="Start Modul"]', // todo: EN
         );
-        const allActivityNameLinks =
-            document.querySelectorAll('.activityname > a');
-        for (let i = 0; i < 5; i++) {
-            // search for completion
-            const currentSection = allSectionItems[i + 3];
-            const currentCompletionWrapper = allCompletionWrappers[i];
-            const currentCompletion =
-                currentCompletionWrapper.querySelector(':scope > button');
-            if (currentCompletion.innerText.includes('Erledigt')) {
-                const completedMessage = 'Module ' + (i + 1) + ' completed\n';
-                logInfo(completedMessage);
-                continue;
-            } else {
-                if (i == 0) {
-                    //allActivityNameLinks[0].click();
-                } else if (i == 1) {
-                    //allActivityNameLinks[2].click();
-                } else if (i == 2) {
-                    //allActivityNameLinks[5].click();
-                } else if (i == 3) {
-                    //allActivityNameLinks[7].click();
-                } else if (i == 4) {
-                    //allActivityNameLinks[8].click();
+
+        for (let i = 0; i < activities.length; i++) {
+            const activity = activities[i];
+
+            const title = activity.querySelector(
+                '.activityname .instancename',
+            ).innerText;
+            const moduleName = title.split('"')[1];
+
+            if (
+                activity.querySelector(
+                    '[data-region="completion-info"] i.fa-check',
+                )
+            ) {
+                if (logCompleted) {
+                    logInfo(`Module already completed: ${moduleName}`);
                 }
+            } else {
+                logInfo(`Module started: ${moduleName}`);
+                activity.querySelector('.activityname a').click();
+                return;
             }
         }
+
+        clearRunningType();
+        logSuccess('All modules completed!');
     }
 
     function initStartModulePage() {
