@@ -9,11 +9,11 @@
 // @run-at       document-idle
 // ==/UserScript==
 
-(function() {
+(function () {
     'use strict';
 
     async function delay(ms) {
-        await new Promise(resolve => setTimeout(resolve, ms));
+        await new Promise((resolve) => setTimeout(resolve, ms));
     }
 
     async function tick() {
@@ -28,7 +28,7 @@
 
     // can either be 'single' or 'all'
     function getRunningType() {
-        return localStorage.getItem("ECTScript-running");
+        return localStorage.getItem('ECTScript-running');
     }
 
     function clearRunningType() {
@@ -45,34 +45,35 @@
     }
 
     function init() {
-        if (window.location.origin !== "https://tuwel.tuwien.ac.at") return;
+        if (window.location.origin !== 'https://tuwel.tuwien.ac.at') return;
 
         function hasCourseTitle() {
-            const titles = document.querySelectorAll("h1");
+            const titles = document.querySelectorAll('h1');
             for (const title of titles) {
                 if (!title.innerText) continue;
-                if (title.innerText.includes("Diversity Skills")) return true;
+                if (title.innerText.includes('Diversity Skills')) return true;
             }
             return false;
         }
 
         function hasCourseBreadcrumb() {
-            const breadcrumbs = document.querySelectorAll(".breadcrumb-item > a");
+            const breadcrumbs = document.querySelectorAll(
+                '.breadcrumb-item > a',
+            );
             for (const breadcrumb of breadcrumbs) {
                 if (!breadcrumb.title) continue;
-                if (breadcrumb.title.includes("Diversity Skills")) return true;
+                if (breadcrumb.title.includes('Diversity Skills')) return true;
             }
             return false;
         }
 
-
         const path = window.location.pathname;
 
-        if (path === "/course/view.php" && hasCourseTitle()) {
+        if (path === '/course/view.php' && hasCourseTitle()) {
             initCoursePage();
-        } else if (path === "/mod/scorm/view.php" && hasCourseBreadcrumb()) {
+        } else if (path === '/mod/scorm/view.php' && hasCourseBreadcrumb()) {
             initStartModulePage();
-        } else if (path === "/mod/scorm/player.php" && hasCourseBreadcrumb()) {
+        } else if (path === '/mod/scorm/player.php' && hasCourseBreadcrumb()) {
             initPlayerPage();
         }
     }
@@ -83,14 +84,14 @@
         const controlsElement = createControlsElement({
             startActionHint: 'you will complete all modules automatically',
             startAction: () => {
-                setRunningType("all");
+                setRunningType('all');
                 logInfo('Script started for all modules.');
                 openNextModule();
-            }
+            },
         });
-        controlsElement.classList.add("section-item");
-        controlsElement.style.marginBottom = "1rem";
-        document.querySelector("#section-0").prepend(controlsElement);
+        controlsElement.classList.add('section-item');
+        controlsElement.style.marginBottom = '1rem';
+        document.querySelector('#section-0').prepend(controlsElement);
 
         if (getRunningType() === 'all') {
             openNextModule();
@@ -98,16 +99,20 @@
     }
 
     function openNextModule() {
-        const allSectionItems = document.querySelectorAll(".section-item");
-        const allCompletionWrappers = document.querySelectorAll(".dropdown.completion-dropdown");
-        const allActivityNameLinks = document.querySelectorAll(".activityname > a");
+        const allSectionItems = document.querySelectorAll('.section-item');
+        const allCompletionWrappers = document.querySelectorAll(
+            '.dropdown.completion-dropdown',
+        );
+        const allActivityNameLinks =
+            document.querySelectorAll('.activityname > a');
         for (let i = 0; i < 5; i++) {
             // search for completion
             const currentSection = allSectionItems[i + 3];
             const currentCompletionWrapper = allCompletionWrappers[i];
-            const currentCompletion = currentCompletionWrapper.querySelector(":scope > button");
-            if (currentCompletion.innerText.includes("Erledigt")) {
-                const completedMessage = "Module " + (i + 1) + " completed\n";
+            const currentCompletion =
+                currentCompletionWrapper.querySelector(':scope > button');
+            if (currentCompletion.innerText.includes('Erledigt')) {
+                const completedMessage = 'Module ' + (i + 1) + ' completed\n';
                 logInfo(completedMessage);
                 continue;
             } else {
@@ -137,7 +142,7 @@
                 setRunningType('single');
                 logInfo(`Script started for single module: ${moduleName}`);
                 startModule();
-            }
+            },
         });
         controlsElement.classList.add('activity-header');
         controlsElement.style.padding = '1em';
@@ -149,7 +154,7 @@
     }
 
     function startModule() {
-        const startButton = document.querySelector("#n");
+        const startButton = document.querySelector('#n');
         startButton.click();
     }
 
@@ -164,7 +169,7 @@
                 setRunningType('single');
                 logInfo(`Script started for single module: ${moduleName}`);
                 runPlayer(moduleName);
-            }
+            },
         });
         controlsElement.classList.add('activity-header');
         controlsElement.style.padding = '1em';
@@ -176,8 +181,8 @@
     }
 
     function createControlsElement(options) {
-        const controlsElement = document.createElement("div");
-        controlsElement.id = "ECTSettings";
+        const controlsElement = document.createElement('div');
+        controlsElement.id = 'ECTSettings';
         controlsElement.innerHTML = `
             <h4 id="ECTScript-heading">ECTScript controls</h4>
             <p>
@@ -189,27 +194,29 @@
             </details>
         `;
 
-        controlsElement.querySelector('#ECTScript-messages-clear').addEventListener('click', e => {
-            e.preventDefault();
-            clearLog(controlsElement);
-        });
+        controlsElement
+            .querySelector('#ECTScript-messages-clear')
+            .addEventListener('click', (e) => {
+                e.preventDefault();
+                clearLog(controlsElement);
+            });
         loadLog(controlsElement);
 
-        const actionButton = controlsElement.querySelector("#ECTScript-action");
+        const actionButton = controlsElement.querySelector('#ECTScript-action');
 
         let action;
 
         function updateActionButton() {
             if (!getRunningType()) {
                 actionButton.innerText = `Start the ECTScript (${options.startActionHint})`;
-                actionButton.className = "ECTScript-action-start";
+                actionButton.className = 'ECTScript-action-start';
                 action = options.startAction;
             } else {
                 actionButton.innerText = `Stop the ECTScript`;
-                actionButton.className = "ECTScript-action-stop";
+                actionButton.className = 'ECTScript-action-stop';
                 action = () => {
                     clearRunningType();
-                    logInfo('Script stopped.')
+                    logInfo('Script stopped.');
                     reload();
                 };
             }
@@ -221,7 +228,7 @@
 
         updateActionButton();
 
-        actionButton.addEventListener("click", () => {
+        actionButton.addEventListener('click', () => {
             action();
         });
 
@@ -229,7 +236,7 @@
     }
 
     function attachStylesheet() {
-        const style = document.createElement("style");
+        const style = document.createElement('style');
         style.textContent = `
             #ECTScript-heading {
                 font-weight: normal;
@@ -323,7 +330,9 @@
     }
 
     function showMessage(message, controlsElement = document) {
-        const messageList = controlsElement.querySelector('#ECTScript-messages');
+        const messageList = controlsElement.querySelector(
+            '#ECTScript-messages',
+        );
         if (!messageList) return;
         const messageElement = document.createElement('li');
         messageElement.classList.add('ECTScript-message');
@@ -335,7 +344,9 @@
         const textElement = document.createElement('span');
         textElement.innerText = message.text;
         messageElement.appendChild(textElement);
-        const isScrolled = messageList.scrollTop + messageList.clientHeight >= messageList.scrollHeight - 5;
+        const isScrolled =
+            messageList.scrollTop + messageList.clientHeight >=
+            messageList.scrollHeight - 5;
         messageList.appendChild(messageElement);
         if (isScrolled) {
             scrollDown(messageList);
@@ -412,7 +423,9 @@
 
             await delay(100);
             if (Date.now() - start > timeout) {
-                throw new Error('Timeout waiting for element with selector: ' + selector);
+                throw new Error(
+                    'Timeout waiting for element with selector: ' + selector,
+                );
             }
         }
         return element;
@@ -421,58 +434,81 @@
     async function runPlayer(moduleName) {
         try {
             await completePlayer(moduleName);
-        } catch(e) {
+        } catch (e) {
             logError(e);
             clearRunningType();
-       }
+        }
     }
 
     async function completePlayer(moduleName) {
         let page;
 
         async function clickContinueButton() {
-            const continueBtn = page.querySelector(".continue-btn");
+            const continueBtn = page.querySelector('.continue-btn');
             if (!continueBtn) return false;
             continueBtn.click();
             return true;
         }
 
         async function clickNextLink() {
-            const nextLink = pageWrap.querySelector('.next-lesson__link, [data-link="lesson-link-item"][data-direction="next"]');
+            const nextLink = pageWrap.querySelector(
+                '.next-lesson__link, [data-link="lesson-link-item"][data-direction="next"]',
+            );
             if (!nextLink) return false;
             nextLink.click();
             return true;
         }
 
         async function solveFlashCards() {
-            if (!page.querySelector(".block-flashcards:not(.ECTScript--done)")) return false; // all flashcards done
-            while (page.querySelector(".continue-hint")) {
-                const flipIcon = page.querySelector(".flip-icon:not(.ECTScript--done)");
+            if (!page.querySelector('.block-flashcards:not(.ECTScript--done)'))
+                return false; // all flashcards done
+            while (page.querySelector('.continue-hint')) {
+                const flipIcon = page.querySelector(
+                    '.flip-icon:not(.ECTScript--done)',
+                );
                 flipIcon.click();
-                flipIcon.classList.add("ECTScript--done");
-                const nextArrow = page.querySelector(".block-flashcards-slider__arrow--next");
+                flipIcon.classList.add('ECTScript--done');
+                const nextArrow = page.querySelector(
+                    '.block-flashcards-slider__arrow--next',
+                );
                 if (nextArrow) nextArrow.click(); // sometimes all flashcards are displayed instantly
                 scrollDown(page.parentElement);
                 await tick();
             }
-            page.querySelector(".block-flashcards:not(.ECTScript--done)").classList.add("ECTScript--done");
+            page.querySelector(
+                '.block-flashcards:not(.ECTScript--done)',
+            ).classList.add('ECTScript--done');
             return true;
         }
 
         async function solveProcessBlocks() {
             const activeCardSelector = '.process-card--active';
             const finalCardSelector = '.process-card--summary';
-            const activeFinalCardSelector = activeCardSelector + finalCardSelector;
+            const activeFinalCardSelector =
+                activeCardSelector + finalCardSelector;
 
-            const processBlock = page.querySelector(`.block-process:not(${activeFinalCardSelector})`);
+            const processBlock = page.querySelector(
+                `.block-process:not(${activeFinalCardSelector})`,
+            );
             if (!processBlock) return false;
 
-            processBlock.querySelector('button, .process-card__button, process-card__start').click();
+            processBlock
+                .querySelector(
+                    'button, .process-card__button, process-card__start',
+                )
+                .click();
             while (!processBlock.querySelector(activeFinalCardSelector)) {
-                const activeCard = processBlock.querySelector(activeCardSelector);
-                const nextBtn = await waitForSelector(activeCard, '.process-counter__item--active + .process-counter__item, process-arrow--right, process-arrow--scrolling');
+                const activeCard =
+                    processBlock.querySelector(activeCardSelector);
+                const nextBtn = await waitForSelector(
+                    activeCard,
+                    '.process-counter__item--active + .process-counter__item, process-arrow--right, process-arrow--scrolling',
+                );
                 nextBtn.click();
-                while (activeCard === processBlock.querySelector(activeCardSelector)) {
+                while (
+                    activeCard ===
+                    processBlock.querySelector(activeCardSelector)
+                ) {
                     await delay(100);
                     nextBtn.click();
                 }
@@ -486,15 +522,15 @@
             if (!so) return null;
             const cf = so.contentDocument.querySelector('#content-frame');
             if (!cf) return null;
-            return cf.contentDocument.querySelector('#app')
+            return cf.contentDocument.querySelector('#app');
         });
 
         // start from the first lesson
         const firstLessonLink = await waitForSelector(
             app,
-            '.lesson-link'
-            + ',.overview-list-item__link'
-            + ',[data-link="lesson-link-item"]'
+            '.lesson-link' +
+                ',.overview-list-item__link' +
+                ',[data-link="lesson-link-item"]',
         );
         firstLessonLink.click();
 
@@ -504,8 +540,7 @@
 
         let pageWrap = await waitForSelector(app, '#page-wrap');
 
-        action:
-        while (true) {
+        action: while (true) {
             for (let retries = 0; retries < maxRetries; retries++) {
                 page = await waitForSelector(pageWrap, 'main:first-of-type');
                 scrollDown(pageWrap);
@@ -523,7 +558,9 @@
                 await delay(retryTimeout);
             }
 
-            throw new Error('Nothing to do, but module does not seem completed!');
+            throw new Error(
+                'Nothing to do, but module does not seem completed!',
+            );
         }
 
         // works without it, but just to be sure, the request goes through
@@ -534,18 +571,27 @@
             clearRunningType();
         } else {
             // close module
-            document.querySelector('div[role="main"] .btn[href^="https://tuwel.tuwien.ac.at/course/view.php"]').click();
+            document
+                .querySelector(
+                    'div[role="main"] .btn[href^="https://tuwel.tuwien.ac.at/course/view.php"]',
+                )
+                .click();
         }
     }
 
     function isLastPage(page) {
-        const lessonCountText = page.querySelector('.lesson-header__count').innerText;
+        const lessonCountText = page.querySelector(
+            '.lesson-header__count',
+        ).innerText;
         const nums = lessonCountText.match(/[0-9]+/g);
         return nums[0] && nums[0] === nums[1];
     }
 
     function fillReactInput(input, value) {
-        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, value);
+        Object.getOwnPropertyDescriptor(
+            HTMLInputElement.prototype,
+            'value',
+        ).set.call(input, value);
         for (const event of ['input', 'change']) {
             input.dispatchEvent(new Event(event, { bubbles: true }));
         }
@@ -555,7 +601,9 @@
         let solution = null;
 
         if (quizCard.querySelector('.quiz-multiple-response-option-wrap')) {
-            const checkboxes = quizCard.querySelectorAll('.quiz-multiple-response-option');
+            const checkboxes = quizCard.querySelectorAll(
+                '.quiz-multiple-response-option',
+            );
             for (const checkbox of checkboxes) {
                 checkbox.click();
             }
@@ -565,37 +613,79 @@
 
             solution = [];
             for (const answer of checkboxes) {
-                solution.push(answer.classList.contains('quiz-multiple-response-option--correct'));
+                solution.push(
+                    answer.classList.contains(
+                        'quiz-multiple-response-option--correct',
+                    ),
+                );
             }
         } else if (quizCard.querySelector('.quiz-match')) {
-            const draggablesLen = quizCard.querySelectorAll('.quiz-match__item--draggable .quiz-match__item-wrapper').length;
+            const draggablesLen = quizCard.querySelectorAll(
+                '.quiz-match__item--draggable .quiz-match__item-wrapper',
+            ).length;
             for (let i = 0; i < draggablesLen; i++) {
-                const draggables = quizCard.querySelectorAll('.quiz-match__item--draggable .quiz-match__item-wrapper');
+                const draggables = quizCard.querySelectorAll(
+                    '.quiz-match__item--draggable .quiz-match__item-wrapper',
+                );
                 draggables[i].focus();
-                draggables[i].dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true }));
+                draggables[i].dispatchEvent(
+                    new KeyboardEvent('keydown', {
+                        key: ' ',
+                        code: 'Space',
+                        keyCode: 32,
+                        which: 32,
+                        bubbles: true,
+                    }),
+                );
 
-                const droppables = quizCard.querySelectorAll('.quiz-match__item.droppable');
+                const droppables = quizCard.querySelectorAll(
+                    '.quiz-match__item.droppable',
+                );
                 droppables[i].focus();
-                droppables[i].dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true }));
+                droppables[i].dispatchEvent(
+                    new KeyboardEvent('keydown', {
+                        key: ' ',
+                        code: 'Space',
+                        keyCode: 32,
+                        which: 32,
+                        bubbles: true,
+                    }),
+                );
             }
 
             await tick();
             quizCard.querySelector('.quiz-card__submit > button').click();
 
             solution = [];
-            const answers = quizCard.querySelectorAll('.quiz-match__item-feedback');
-            const draggables = quizCard.querySelectorAll('.quiz-match__item--draggable .quiz-match__item-wrapper');
-            const droppables = quizCard.querySelectorAll('.quiz-match__item.droppable');
+            const answers = quizCard.querySelectorAll(
+                '.quiz-match__item-feedback',
+            );
+            const draggables = quizCard.querySelectorAll(
+                '.quiz-match__item--draggable .quiz-match__item-wrapper',
+            );
+            const droppables = quizCard.querySelectorAll(
+                '.quiz-match__item.droppable',
+            );
             for (let i = 0; i < answers.length; i++) {
-                const bubble = answers[i].querySelector('.quiz-match__item-feedback-bubble');
+                const bubble = answers[i].querySelector(
+                    '.quiz-match__item-feedback-bubble',
+                );
                 const targetIndex = bubble ? parseInt(bubble.innerText) - 1 : i;
                 solution.push({
-                    origin: draggables[i].querySelector('[data-match-content="true"]').innerText,
-                    target: droppables[targetIndex].querySelector('[data-match-content="true"]').innerText,
+                    origin: draggables[i].querySelector(
+                        '[data-match-content="true"]',
+                    ).innerText,
+                    target: droppables[targetIndex].querySelector(
+                        '[data-match-content="true"]',
+                    ).innerText,
                 });
             }
-        } else if (quizCard.querySelector('.quiz-multiple-choice-option-wrap')) {
-            const options = quizCard.querySelectorAll('.quiz-multiple-choice-option');
+        } else if (
+            quizCard.querySelector('.quiz-multiple-choice-option-wrap')
+        ) {
+            const options = quizCard.querySelectorAll(
+                '.quiz-multiple-choice-option',
+            );
 
             options[0].click();
 
@@ -604,17 +694,23 @@
 
             solution = [];
             for (let i = 0; i < options.length; i++) {
-                const inc = options[i].classList.contains('quiz-multiple-choice-option--incorrect')
+                const inc = options[i].classList.contains(
+                    'quiz-multiple-choice-option--incorrect',
+                );
                 solution.push(!inc);
             }
         } else if (quizCard.querySelector('.quiz-fill')) {
-            const input = quizCard.querySelector('.quiz-fill__container > input');
+            const input = quizCard.querySelector(
+                '.quiz-fill__container > input',
+            );
             fillReactInput(input, '-');
 
             await tick();
             quizCard.querySelector('.quiz-card__submit > button').click();
 
-            const optionsFeedback = quizCard.querySelector('.quiz-fill__options').innerText;
+            const optionsFeedback = quizCard.querySelector(
+                '.quiz-fill__options',
+            ).innerText;
             solution = optionsFeedback.replace(/.*: /, '').split(', ')[0];
         }
 
@@ -623,7 +719,9 @@
 
     async function applyQuizCardSolution(quizCard, solution) {
         if (quizCard.querySelector('.quiz-multiple-response-option-wrap')) {
-            const checkboxes = quizCard.querySelectorAll('.quiz-multiple-response-option');
+            const checkboxes = quizCard.querySelectorAll(
+                '.quiz-multiple-response-option',
+            );
             for (let i = 0; i < checkboxes.length; i++) {
                 if (solution[i]) {
                     checkboxes[i].click();
@@ -638,23 +736,55 @@
             while (solution.length > 0) {
                 const match = solution.shift();
 
-                const draggables = quizCard.querySelectorAll('.quiz-match__item--draggable .quiz-match__item-wrapper');
-                const draggable = Array.from(draggables).find(d => d.querySelector('[data-match-content="true"]').innerText === match.origin);
+                const draggables = quizCard.querySelectorAll(
+                    '.quiz-match__item--draggable .quiz-match__item-wrapper',
+                );
+                const draggable = Array.from(draggables).find(
+                    (d) =>
+                        d.querySelector('[data-match-content="true"]')
+                            .innerText === match.origin,
+                );
                 draggable.focus();
-                draggable.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true }));
+                draggable.dispatchEvent(
+                    new KeyboardEvent('keydown', {
+                        key: ' ',
+                        code: 'Space',
+                        keyCode: 32,
+                        which: 32,
+                        bubbles: true,
+                    }),
+                );
 
-                const droppables = quizCard.querySelectorAll('.quiz-match__item.droppable');
-                const droppable = Array.from(droppables).find(d => d.querySelector('[data-match-content="true"]').innerText === match.target);
+                const droppables = quizCard.querySelectorAll(
+                    '.quiz-match__item.droppable',
+                );
+                const droppable = Array.from(droppables).find(
+                    (d) =>
+                        d.querySelector('[data-match-content="true"]')
+                            .innerText === match.target,
+                );
                 droppable.focus();
-                droppable.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true }));
+                droppable.dispatchEvent(
+                    new KeyboardEvent('keydown', {
+                        key: ' ',
+                        code: 'Space',
+                        keyCode: 32,
+                        which: 32,
+                        bubbles: true,
+                    }),
+                );
             }
 
             await tick();
             quizCard.querySelector('.quiz-card__submit > button').click();
 
             return true;
-        } else if (quizCard.querySelector('.quiz-multiple-choice-option-wrap')) {
-            const options = quizCard.querySelectorAll('.quiz-multiple-choice-option');
+        } else if (
+            quizCard.querySelector('.quiz-multiple-choice-option-wrap')
+        ) {
+            const options = quizCard.querySelectorAll(
+                '.quiz-multiple-choice-option',
+            );
             for (let i = 0; i < options.length; i++) {
                 if (solution[i]) {
                     options[i].click();
@@ -666,7 +796,9 @@
 
             return true;
         } else if (quizCard.querySelector('.quiz-fill')) {
-            const input = quizCard.querySelector('.quiz-fill__container > input');
+            const input = quizCard.querySelector(
+                '.quiz-fill__container > input',
+            );
             fillReactInput(input, solution);
 
             await tick();
@@ -713,7 +845,10 @@
             } else {
                 const solution = await collectQuizCardSolution(activeCard);
                 if (solution) {
-                    const nextBtn = await waitForSelector(activeCard, '.quiz-card__feedback-button > button, quiz-card__button--next');
+                    const nextBtn = await waitForSelector(
+                        activeCard,
+                        '.quiz-card__feedback-button > button, quiz-card__button--next',
+                    );
                     nextBtn.click();
 
                     solutions.push(solution);
@@ -739,9 +874,15 @@
                 // done
                 break;
             } else {
-                const didApply = await applyQuizCardSolution(activeCard, solutions[0]);
+                const didApply = await applyQuizCardSolution(
+                    activeCard,
+                    solutions[0],
+                );
                 if (didApply) {
-                    const nextBtn = await waitForSelector(activeCard, '.quiz-card__feedback-button > button, quiz-card__button--next');
+                    const nextBtn = await waitForSelector(
+                        activeCard,
+                        '.quiz-card__feedback-button > button, quiz-card__button--next',
+                    );
                     nextBtn.click();
 
                     solutions.shift();
@@ -768,13 +909,19 @@
 
         knowledgeBlock.querySelector('.block-knowledge__retake').click();
 
-        while (knowledgeBlock.querySelector('.quiz-multiple-choice-option-wrap--complete')) {
+        while (
+            knowledgeBlock.querySelector(
+                '.quiz-multiple-choice-option-wrap--complete',
+            )
+        ) {
             await delay(100);
         }
 
         await applyQuizCardSolution(knowledgeBlock, solution);
 
-        if (!knowledgeBlock.querySelector('.quiz-card__feedback-icon--correct')) {
+        if (
+            !knowledgeBlock.querySelector('.quiz-card__feedback-icon--correct')
+        ) {
             return false;
         }
 
