@@ -100,7 +100,7 @@
 
     function openNextModule(logCompleted = false) {
         const activities = document.querySelectorAll(
-            '.activity-item[data-activityname^="Start Modul"]', // todo: EN
+            '.activity-item[data-activityname^="Start Modul"]', // de/en: Start Modul(e)..
         );
 
         for (let i = 0; i < activities.length; i++) {
