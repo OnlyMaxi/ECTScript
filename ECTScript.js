@@ -517,6 +517,29 @@
             return true;
         }
 
+        async function solveLabeledGraphicCanvas() {
+            const next = page.querySelector(
+                '.labeled-graphic-canvas:not(.ECTScript--done)',
+            );
+            if (!next) return false; // all done
+            while (true) {
+                const marker = page.querySelector(
+                    '.labeled-graphic-marker:not(.labeled-graphic-marker--complete)',
+                );
+                if (!marker) break;
+                marker.click();
+                await tick();
+
+                const activeBubbleClose = app.querySelector(
+                    '#portal .bubble--active .bubble__close',
+                );
+                if (activeBubbleClose) activeBubbleClose.click();
+                await tick();
+            }
+            next.classList.add('ECTScript--done');
+            return true;
+        }
+
         // wait until loaded
         const app = await waitForSelector(document, (parent) => {
             const so = parent.querySelector('#scorm_object');
@@ -552,6 +575,7 @@
                 if (await clickNextLink()) continue action;
                 if (await solveFlashCards()) continue action;
                 if (await solveProcessBlocks()) continue action;
+                if (await solveLabeledGraphicCanvas()) continue action;
                 if (await solveQuizzes(page)) continue action;
 
                 if (isLastPage(app, page)) break action;
