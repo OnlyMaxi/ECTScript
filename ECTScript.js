@@ -553,7 +553,7 @@
                 if (await solveProcessBlocks()) continue action;
                 if (await solveQuizzes(page)) continue action;
 
-                if (isLastPage(page)) break action;
+                if (isLastPage(app, page)) break action;
 
                 await delay(retryTimeout);
             }
@@ -579,12 +579,24 @@
         }
     }
 
-    function isLastPage(page) {
-        const lessonCountText = page.querySelector(
-            '.lesson-header__count',
-        ).innerText;
-        const nums = lessonCountText.match(/[0-9]+/g);
-        return nums[0] && nums[0] === nums[1];
+    function isLastPage(app, page) {
+        const lessonCount = page.querySelector('.lesson-header__count');
+        if (lessonCount) {
+            const nums = lessonCount.innerText.match(/[0-9]+/g);
+            return nums[0] && nums[0] === nums[1];
+        }
+
+        var sidebarItems = app.querySelectorAll(
+            '.nav-sidebar__outline-list .nav-sidebar__outline-section-item__link',
+        );
+        const last = sidebarItems[sidebarItems.length - 1];
+        if (last) {
+            return last.classList.contains(
+                'nav-sidebar__outline-section-item__link--active',
+            );
+        }
+
+        throw new Error('Last page detection failed');
     }
 
     function fillReactInput(input, value) {
