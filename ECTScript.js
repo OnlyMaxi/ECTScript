@@ -491,6 +491,7 @@
             );
             if (!processBlock) return false;
 
+            await delay(10); // todo (start button sometimes not initialized)
             processBlock
                 .querySelector(
                     'button, .process-card__button, process-card__start',
