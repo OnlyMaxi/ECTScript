@@ -607,9 +607,10 @@
             for (const checkbox of checkboxes) {
                 checkbox.click();
             }
-
             await tick();
+
             quizCard.querySelector('.quiz-card__submit > button').click();
+            await tick();
 
             solution = [];
             for (const answer of checkboxes) {
@@ -617,6 +618,11 @@
                     answer.classList.contains(
                         'quiz-multiple-response-option--correct',
                     ),
+                );
+            }
+            if (solution.every((s) => !s)) {
+                throw new Error(
+                    'Failed to collect quiz solution, no correct answer was collected',
                 );
             }
         } else if (quizCard.querySelector('.quiz-match')) {
@@ -652,9 +658,10 @@
                     }),
                 );
             }
-
             await tick();
+
             quizCard.querySelector('.quiz-card__submit > button').click();
+            await tick();
 
             solution = [];
             const answers = quizCard.querySelectorAll(
@@ -688,9 +695,10 @@
             );
 
             options[0].click();
-
             await tick();
+
             quizCard.querySelector('.quiz-card__submit > button').click();
+            await tick();
 
             solution = [];
             for (let i = 0; i < options.length; i++) {
@@ -704,9 +712,10 @@
                 '.quiz-fill__container > input',
             );
             fillReactInput(input, '-');
-
             await tick();
+
             quizCard.querySelector('.quiz-card__submit > button').click();
+            await tick();
 
             const optionsFeedback = quizCard.querySelector(
                 '.quiz-fill__options',
@@ -815,20 +824,16 @@
         if (!quizWrap) return false;
 
         let lastActiveCard = null;
-        let activeCard = quizWrap.querySelector('.quiz-item__card--active');
 
-        // restart if needed
-        if (!activeCard.querySelector('.quiz-header__container')) {
-            quizWrap.querySelector('.restart-button').click();
-            lastActiveCard = activeCard;
-        }
-
-        // collect solutions
-        let solutions = [];
+        let solutions = new Map();
+        let restarts = 0;
+        let solvedCards = 0;
         while (true) {
             await tick();
 
-            let activeCard = quizWrap.querySelector('.quiz-item__card--active');
+            const activeCard = quizWrap.querySelector(
+                '.quiz-item__card--active',
+            );
             if (!activeCard) break;
             if (activeCard === lastActiveCard) {
                 await delay(100);
@@ -839,69 +844,68 @@
             if (activeCard.querySelector('.quiz-header__container')) {
                 activeCard.querySelector('.quiz-header__start-quiz').click();
             } else if (activeCard.querySelector('.quiz-results')) {
+                function getScore() {
+                    return quizWrap.querySelector(
+                        '.odometer__score-percent--hidden',
+                    );
+                }
+                let score;
+                while (!(score = getScore())) {
+                    await delay(100);
+                }
+                if (score.innerText == '100%') {
+                    break;
+                }
+
+                if (restarts >= 2) {
+                    throw new Error(
+                        `Quiz not fully solved after two restarts.`,
+                    );
+                }
+
                 // restart quiz
+                restarts++;
                 activeCard.querySelector('.restart-button').click();
-                break;
             } else {
-                const solution = await collectQuizCardSolution(activeCard);
-                if (solution) {
+                const questionId = activeCard.querySelector(
+                    '.quiz-card__counter',
+                ).innerText;
+
+                if (!solutions.has(questionId)) {
+                    // collect solution
+                    const solution = await collectQuizCardSolution(activeCard);
+                    if (!solution) {
+                        throw new Error('Failed to collect quiz card solution');
+                    }
+                    solutions.set(questionId, solution);
+
                     const nextBtn = await waitForSelector(
                         activeCard,
-                        '.quiz-card__feedback-button > button, quiz-card__button--next',
+                        '.quiz-card__feedback-button > button, .quiz-card__button--next',
                     );
                     nextBtn.click();
+                } else {
+                    // apply solution
+                    const didApply = await applyQuizCardSolution(
+                        activeCard,
+                        solutions.get(questionId),
+                    );
+                    if (!didApply) {
+                        throw new Error('Failed to apply quiz card solution');
+                    }
 
-                    solutions.push(solution);
-                }
-            }
-        }
-
-        // run with solutions
-        while (true) {
-            await tick();
-
-            let activeCard = quizWrap.querySelector('.quiz-item__card--active');
-            if (!activeCard) break;
-            if (activeCard === lastActiveCard) {
-                await delay(100);
-                continue;
-            }
-            lastActiveCard = activeCard;
-
-            if (activeCard.querySelector('.quiz-header__container')) {
-                activeCard.querySelector('.quiz-header__start-quiz').click();
-            } else if (activeCard.querySelector('.quiz-results')) {
-                // done
-                break;
-            } else {
-                const didApply = await applyQuizCardSolution(
-                    activeCard,
-                    solutions[0],
-                );
-                if (didApply) {
                     const nextBtn = await waitForSelector(
                         activeCard,
-                        '.quiz-card__feedback-button > button, quiz-card__button--next',
+                        '.quiz-card__feedback-button > button, .quiz-card__button--next',
                     );
                     nextBtn.click();
-
-                    solutions.shift();
                 }
             }
+
+            solvedCards++;
         }
 
-        function getScore() {
-            return quizWrap.querySelector('.odometer__score-percent--hidden');
-        }
-        let score;
-        while (!(score = getScore())) {
-            await delay(100);
-        }
-        if (score.innerText !== '100%') {
-            throw new Error('Quiz not completed with full score!');
-        }
-
-        return true;
+        return solvedCards > 0;
     }
 
     async function solveKnowledgeBlock(knowledgeBlock) {
