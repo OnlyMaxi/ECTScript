@@ -554,12 +554,12 @@
                 await tick();
 
                 // iterate through each action, if it isn't possible, another action is needed
-                if (await clickContinueButton()) continue action;
-                if (await clickNextLink()) continue action;
                 if (await solveFlashCards()) continue action;
                 if (await solveProcessBlocks()) continue action;
                 if (await solveLabeledGraphicCanvas()) continue action;
                 if (await solveQuizzes(page)) continue action;
+                if (await clickContinueButton()) continue action;
+                if (await clickNextLink()) continue action;
 
                 if (isLastPage(app, page)) break action;
 
