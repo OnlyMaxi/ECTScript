@@ -348,7 +348,7 @@
             messageList.scrollHeight - 5;
         messageList.appendChild(messageElement);
         if (isScrolled) {
-            scrollDown(messageList);
+            requestAnimationFrame(() => scrollDown(messageList));
         }
     }
 
