@@ -12,28 +12,25 @@
 (function () {
     'use strict';
 
+    const rawState = sessionStorage.getItem('ECTScript-state');
+    const state = rawState
+        ? JSON.parse(rawState)
+        : {
+              mode: 'traverse', // 'traverse', 'api'
+              allModules: true,
+              running: false,
+          };
+    function saveState() {
+        sessionStorage.setItem('ECTScript-state', JSON.stringify(state));
+        document.dispatchEvent(new CustomEvent('ECTScript-state-update'));
+    }
+
     async function delay(ms) {
         await new Promise((resolve) => setTimeout(resolve, ms));
     }
 
     async function tick() {
         await delay(0);
-    }
-
-    // can either be 'single' or 'all'
-    function setRunningType(type) {
-        sessionStorage.setItem('ECTScript-running', type);
-        document.dispatchEvent(new CustomEvent('ECTScript-running-update'));
-    }
-
-    // can either be 'single' or 'all'
-    function getRunningType() {
-        return sessionStorage.getItem('ECTScript-running');
-    }
-
-    function clearRunningType() {
-        sessionStorage.removeItem('ECTScript-running');
-        document.dispatchEvent(new CustomEvent('ECTScript-running-update'));
     }
 
     function scrollDown(element) {
@@ -82,9 +79,11 @@
         attachStylesheet();
 
         const controlsElement = createControlsElement({
-            startActionHint: 'you will complete all modules automatically',
+            note: 'Complete all modules automatically.',
             startAction: () => {
-                setRunningType('all');
+                state.allModules = true;
+                state.running = true;
+                saveState();
                 logInfo('Script started for all modules.');
                 openNextModule(true);
             },
@@ -93,7 +92,7 @@
         controlsElement.style.marginBottom = '1rem';
         document.querySelector('#section-0').prepend(controlsElement);
 
-        if (getRunningType() === 'all') {
+        if (state.running && state.allModules) {
             openNextModule();
         }
     }
@@ -122,7 +121,8 @@
             }
         }
 
-        clearRunningType();
+        state.running = false;
+        saveState();
         logSuccess('All modules completed!');
     }
 
@@ -132,9 +132,11 @@
         const moduleName = document.querySelector('h1').innerText.split('"')[1];
 
         const controlsElement = createControlsElement({
-            startActionHint: `you will complete this module automatically: ${moduleName}`,
+            note: `Complete this module automatically: ${moduleName}`,
             startAction: () => {
-                setRunningType('single');
+                state.allModules = false;
+                state.running = true;
+                saveState();
                 logInfo(`Script started for single module: ${moduleName}`);
                 startModule();
             },
@@ -143,7 +145,7 @@
         controlsElement.style.padding = '1em';
         document.querySelector('#region-main').prepend(controlsElement);
 
-        if (getRunningType() == 'all') {
+        if (state.running && state.allModules) {
             startModule();
         }
     }
@@ -159,9 +161,11 @@
         const moduleName = document.querySelector('h1').innerText.split('"')[1];
 
         const controlsElement = createControlsElement({
-            startActionHint: `you will complete this module automatically: ${moduleName}`,
+            note: `Complete this module automatically: ${moduleName}`,
             startAction: () => {
-                setRunningType('single');
+                state.allModules = false;
+                state.running = true;
+                saveState();
                 logInfo(`Script started for single module: ${moduleName}`);
                 runPlayer(moduleName);
             },
@@ -170,7 +174,7 @@
         controlsElement.style.padding = '1em';
         document.querySelector('#region-main').prepend(controlsElement);
 
-        if (getRunningType()) {
+        if (state.running) {
             runPlayer(moduleName);
         }
     }
@@ -179,15 +183,24 @@
         const controlsElement = document.createElement('div');
         controlsElement.id = 'ECTSettings';
         controlsElement.innerHTML = `
-            <h4 id="ECTScript-heading">ECTScript controls</h4>
-            <p>
-                <a id="ECTScript-action"></a>
-            </p>
+            <h4 id="ECTScript-heading" class="mb-3">ECTScript controls</h4>
+            <p id="ECTScript-note" class="form-text"></p>
+
+            <select id="ECTScript-mode" class="form-select mb-3">
+                <option value="traverse">Traverse everything (slow, safe)</option>
+                <option value="api">Spoof API calls (faster, unsafe)</option>
+            </select>
+
+            <a id="ECTScript-action" class="btn btn-primary mb-3"></a>
+
             <details open id="ECTScript-messages-wrapper">
                 <summary>Messages <a id="ECTScript-messages-clear">(Clear)</a></summary>
                 <ul id="ECTScript-messages"></ul>
             </details>
         `;
+
+        const note = controlsElement.querySelector('#ECTScript-note');
+        note.innerText = options.note;
 
         controlsElement
             .querySelector('#ECTScript-messages-clear')
@@ -197,31 +210,40 @@
             });
         loadLog(controlsElement);
 
-        const actionButton = controlsElement.querySelector('#ECTScript-action');
+        const modeSelect = controlsElement.querySelector('#ECTScript-mode');
+        modeSelect.value = state.mode;
+        modeSelect.addEventListener('change', () => {
+            state.mode = modeSelect.value;
+            saveState();
+        });
 
+        const actionButton = controlsElement.querySelector('#ECTScript-action');
         let action;
 
-        function updateActionButton() {
-            if (!getRunningType()) {
-                actionButton.innerText = `Start the ECTScript (${options.startActionHint})`;
-                actionButton.className = 'ECTScript-action-start';
+        function onStateUpdate() {
+            modeSelect.disabled = state.running;
+
+            if (!state.running) {
+                actionButton.innerText = `Start the ECTScript`;
+                actionButton.classList.add('btn-primary');
+                actionButton.classList.remove('btn-danger');
                 action = options.startAction;
             } else {
                 actionButton.innerText = `Stop the ECTScript`;
-                actionButton.className = 'ECTScript-action-stop';
+                actionButton.classList.remove('btn-primary');
+                actionButton.classList.add('btn-danger');
                 action = () => {
-                    clearRunningType();
+                    state.running = false;
+                    saveState();
                     logInfo('Script stopped.');
                     reload();
                 };
             }
         }
-
-        document.addEventListener('ECTScript-running-update', () => {
-            updateActionButton();
+        document.addEventListener('ECTScript-state-update', () => {
+            onStateUpdate();
         });
-
-        updateActionButton();
+        onStateUpdate();
 
         actionButton.addEventListener('click', () => {
             action();
@@ -233,21 +255,11 @@
     function attachStylesheet() {
         const style = document.createElement('style');
         style.textContent = `
-            #ECTScript-heading {
-                font-weight: normal;
-                font-size: 1.3rem;
-                margin-bottom: .75em;
-            }
-
-            .ECTScript-action-start, #ECTScript-messages-clear {
+            #ECTScript-messages-clear {
                 color: #006699;
             }
 
-            .ECTScript-action-stop {
-                color: #cc0033;
-            }
-
-            #ECTScript-action:hover, #ECTScript-messages-clear:hover {
+            #ECTScript-messages-clear:hover {
                 text-decoration: underline;
                 cursor: pointer;
             }
@@ -428,14 +440,59 @@
 
     async function runPlayer(moduleName) {
         try {
-            await completePlayer(moduleName);
+            if (state.mode === 'traverse') {
+                await traversePlayer(moduleName);
+            } else if (state.mode === 'api') {
+                await spoofApiCall();
+            }
+
+            logSuccess(`Module completed: ${moduleName}`);
+            if (!state.allModules) {
+                state.running = false;
+                saveState();
+            } else {
+                // close module
+                document
+                    .querySelector(
+                        'div[role="main"] .btn[href^="https://tuwel.tuwien.ac.at/course/view.php"]',
+                    )
+                    .click();
+            }
         } catch (e) {
             logError(e);
-            clearRunningType();
+            state.running = false;
+            saveState();
         }
     }
 
-    async function completePlayer(moduleName) {
+    async function spoofApiCall() {
+        const scormObject = await waitForSelector(document, (parent) => {
+            const so = parent.querySelector('#scorm_object');
+            if (!so) return null;
+            return so.contentDocument.querySelector('#content-frame')
+                ? so
+                : null;
+        });
+        const scormParams = new URL(scormObject.src).searchParams;
+
+        await fetch('https://tuwel.tuwien.ac.at/mod/scorm/datamodel.php', {
+            headers: {
+                'content-type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                id: M.cfg.contextInstanceId,
+                sesskey: M.cfg.sesskey,
+                attempt: scormParams.get('attempt'),
+                a: scormParams.get('a'),
+                scoid: scormParams.get('scoid'),
+                cmi__core__score__raw: 100,
+                cmi__core__lesson_status: 'passed',
+            }),
+            method: 'POST',
+        });
+    }
+
+    async function traversePlayer(moduleName) {
         let page;
 
         async function clickContinueButton() {
@@ -570,18 +627,6 @@
 
         // works without it, but just to be sure, the request goes through
         await delay(500);
-
-        logSuccess(`Module completed: ${moduleName}`);
-        if (getRunningType() === 'single') {
-            clearRunningType();
-        } else {
-            // close module
-            document
-                .querySelector(
-                    'div[role="main"] .btn[href^="https://tuwel.tuwien.ac.at/course/view.php"]',
-                )
-                .click();
-        }
     }
 
     function isLastPage(app, page) {
