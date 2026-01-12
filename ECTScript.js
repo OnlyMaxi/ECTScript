@@ -557,6 +557,7 @@
                 if (await solveFlashCards()) continue action;
                 if (await solveProcessBlocks()) continue action;
                 if (await solveLabeledGraphicCanvas()) continue action;
+                if (await solveKnowledgeBlocks(page)) continue action;
                 if (await solveQuizzes(page)) continue action;
                 if (await clickContinueButton()) continue action;
                 if (await clickNextLink()) continue action;
@@ -928,26 +929,38 @@
         return solvedCards > 0;
     }
 
-    async function solveKnowledgeBlock(knowledgeBlock) {
+    async function solveKnowledgeBlocks(page) {
+        const knowledgeBlock = page.querySelector(
+            '.block-knowledge:not(:has(.quiz-card__feedback-icon--correct))',
+        );
+        if (!knowledgeBlock) return false;
+
+        if (knowledgeBlock.querySelector('.quiz-card__feedback--active')) {
+            knowledgeBlock.querySelector('.block-knowledge__retake').click();
+            // somehow options get cleared a while after quiz is reset
+            while (knowledgeBlock.querySelector('[aria-checked="true"]')) {
+                await delay(100);
+            }
+        }
+
         const solution = await collectQuizCardSolution(knowledgeBlock);
-
+        if (!solution) {
+            throw new Error('Failed to collect quiz card solution');
+        }
         knowledgeBlock.querySelector('.block-knowledge__retake').click();
-
-        while (
-            knowledgeBlock.querySelector(
-                '.quiz-multiple-choice-option-wrap--complete',
-            )
-        ) {
+        // somehow options get cleared a while after quiz is reset
+        while (knowledgeBlock.querySelector('[aria-checked="true"]')) {
             await delay(100);
         }
 
-        await applyQuizCardSolution(knowledgeBlock, solution);
-
-        if (
-            !knowledgeBlock.querySelector('.quiz-card__feedback-icon--correct')
-        ) {
-            return false;
+        const didApply = await applyQuizCardSolution(knowledgeBlock, solution);
+        if (!didApply) {
+            throw new Error('Failed to apply quiz card solution');
         }
+        await waitForSelector(
+            knowledgeBlock,
+            '.quiz-card__feedback-icon--correct',
+        );
 
         return true;
     }
