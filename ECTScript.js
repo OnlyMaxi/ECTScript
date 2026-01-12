@@ -22,17 +22,17 @@
 
     // can either be 'single' or 'all'
     function setRunningType(type) {
-        localStorage.setItem('ECTScript-running', type);
+        sessionStorage.setItem('ECTScript-running', type);
         document.dispatchEvent(new CustomEvent('ECTScript-running-update'));
     }
 
     // can either be 'single' or 'all'
     function getRunningType() {
-        return localStorage.getItem('ECTScript-running');
+        return sessionStorage.getItem('ECTScript-running');
     }
 
     function clearRunningType() {
-        localStorage.removeItem('ECTScript-running');
+        sessionStorage.removeItem('ECTScript-running');
         document.dispatchEvent(new CustomEvent('ECTScript-running-update'));
     }
 
@@ -355,7 +355,7 @@
     function getMessages() {
         let messages;
         try {
-            messages = JSON.parse(localStorage.getItem('ECTScript-messages'));
+            messages = JSON.parse(sessionStorage.getItem('ECTScript-messages'));
             for (const message of messages) {
                 message.date = new Date(message.date);
             }
@@ -377,7 +377,7 @@
 
         const messages = getMessages();
         messages.push(message);
-        localStorage.setItem('ECTScript-messages', JSON.stringify(messages));
+        sessionStorage.setItem('ECTScript-messages', JSON.stringify(messages));
 
         showMessage(message);
     }
@@ -403,7 +403,7 @@
     }
 
     function clearLog(controlsElement = document) {
-        localStorage.removeItem('ECTScript-messages');
+        sessionStorage.removeItem('ECTScript-messages');
         controlsElement.querySelector('#ECTScript-messages').innerHTML = '';
     }
 
