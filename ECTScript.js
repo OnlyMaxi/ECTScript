@@ -483,7 +483,7 @@
 
         async function solveProcessBlocks() {
             const unenteredCardSelector =
-                '.process-card:not(.process-card--entered)';
+                '.process-card:not(.process-card--entered), .process-card--next';
             const processBlock = page.querySelector(
                 `.block-process:has(${unenteredCardSelector})`,
             );
