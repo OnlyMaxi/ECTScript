@@ -459,24 +459,25 @@
         }
 
         async function solveFlashCards() {
-            if (!page.querySelector('.block-flashcards:not(.ECTScript--done)'))
-                return false; // all flashcards done
-            while (page.querySelector('.continue-hint')) {
-                const flipIcon = page.querySelector(
-                    '.flip-icon:not(.ECTScript--done)',
+            const block = page.querySelector(
+                '.block-flashcards:not(.ECTScript--done)',
+            );
+            if (!block) return false; // all flashcards done
+            while (true) {
+                const flashcard = block.querySelector(
+                    '.flashcard:not(.flashcard--flipped), .block-flashcard:not(.block-flashcard--flipped) .block-flashcard__flip',
                 );
-                flipIcon.click();
-                flipIcon.classList.add('ECTScript--done');
-                const nextArrow = page.querySelector(
+                if (!flashcard) break;
+
+                flashcard.click();
+                const nextArrow = block.querySelector(
                     '.block-flashcards-slider__arrow--next',
                 );
                 if (nextArrow) nextArrow.click(); // sometimes all flashcards are displayed instantly
                 scrollDown(page.parentElement);
                 await tick();
             }
-            page.querySelector(
-                '.block-flashcards:not(.ECTScript--done)',
-            ).classList.add('ECTScript--done');
+            block.classList.add('ECTScript--done');
             return true;
         }
 
