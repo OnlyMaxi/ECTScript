@@ -111,11 +111,7 @@
             ).innerText;
             const moduleName = title.split('"')[1];
 
-            if (
-                activity.querySelector(
-                    '[data-region="completion-info"] i.fa-check',
-                )
-            ) {
+            if (activity.querySelector('.btn-subtle-success')) {
                 if (logCompleted) {
                     logInfo(`Module already completed: ${moduleName}`);
                 }
