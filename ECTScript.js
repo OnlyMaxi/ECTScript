@@ -482,37 +482,20 @@
         }
 
         async function solveProcessBlocks() {
-            const activeCardSelector = '.process-card--active';
-            const finalCardSelector = '.process-card--summary';
-            const activeFinalCardSelector =
-                activeCardSelector + finalCardSelector;
-
+            const unenteredCardSelector =
+                '.process-card:not(.process-card--entered)';
             const processBlock = page.querySelector(
-                `.block-process:not(${activeFinalCardSelector})`,
+                `.block-process:has(${unenteredCardSelector})`,
             );
             if (!processBlock) return false;
 
-            await delay(10); // todo (start button sometimes not initialized)
-            processBlock
-                .querySelector(
-                    'button, .process-card__button, process-card__start',
-                )
-                .click();
-            while (!processBlock.querySelector(activeFinalCardSelector)) {
-                const activeCard =
-                    processBlock.querySelector(activeCardSelector);
+            while (processBlock.querySelector(unenteredCardSelector)) {
                 const nextBtn = await waitForSelector(
-                    activeCard,
-                    '.process-counter__item--active + .process-counter__item, process-arrow--right, process-arrow--scrolling',
+                    processBlock,
+                    '.process-arrow--right',
                 );
                 nextBtn.click();
-                while (
-                    activeCard ===
-                    processBlock.querySelector(activeCardSelector)
-                ) {
-                    await delay(100);
-                    nextBtn.click();
-                }
+                await delay(100);
             }
             return true;
         }
