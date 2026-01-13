@@ -1,6 +1,6 @@
 # ECTScript
 
-Although the course Diversity Skills by TU Wien aims to convey the importance of inclusion, it does not seem to be very accessible for students with limited time.
+Although the course Diversity Skills ([EN](https://tiss.tuwien.ac.at/course/courseDetails.xhtml?courseNr=064030) / [DE](https://tiss.tuwien.ac.at/course/courseDetails.xhtml?courseNr=064029)) by TU Wien aims to convey the importance of inclusion, it does not seem to be very accessible for students with limited time.
 
 This tool can solve this problem by providing the student with a more streamlined approach for completing the course.
 
