@@ -7,6 +7,8 @@
 // @match        https://tuwel.tuwien.ac.at/mod/scorm/view.php?id=*
 // @match        https://tuwel.tuwien.ac.at/mod/scorm/player.php
 // @run-at       document-idle
+// @source       https://github.com/OnlyMaxi/ECTScript
+// @license      https://raw.githubusercontent.com/OnlyMaxi/ECTScript/refs/heads/main/LICENSE
 // ==/UserScript==
 
 (function () {
