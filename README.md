@@ -12,7 +12,7 @@ Do not use this tool. The code in this repo is just for educational purposes and
 
 - Install [Tampermonkey](https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo?hl=en) on a Chromium-based browser or [Greasemonkey](https://addons.mozilla.org/de/firefox/addon/greasemonkey/) on Firefox
 - Install the script [from here](https://greasyfork.org/en/scripts/562464) or copy the code into the extension manually
-- Visit the Diversity Skills course page on TUWEL
+- Visit the Diversity Skills course page on TUWEL or refresh the course page
 - Click "Start the ECTScript"
   ![screenshot](./screenshot.png)
 
