@@ -14,5 +14,6 @@ Do not use this tool. The code in this repo is just for educational purposes and
 - Install the script [from here](https://greasyfork.org/en/scripts/562464) or copy the code into the extension manually
 - Visit the Diversity Skills course page on TUWEL
 - Click "Start the ECTScript"
+  ![screenshot](./screenshot.png)
 
 You can receive seperate credits for both the English and German course.
